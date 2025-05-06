@@ -12,12 +12,31 @@ const Banner = () => {
     return (<></>)
   }
 
+  //check login state
+  const user = JSON.parse(localStorage.getItem("user"));
+
   // Handle search on Enter key press
   const handleSearch = (e) => {
     if (e.key === "Enter" && searchQuery.trim()) {
       navigate(`/search?q=${searchQuery.trim()}`);
     }
   };
+
+  const handleCreatePost = () => {
+    if (!user) return; //do nothing if not logged in
+    navigate("/create-post");
+  };
+
+  //logout
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("user");
+      navigate("/");
+    } catch (err) {
+      alert("Logout failed. Please try again.");
+    }
+  };
+
 
   return (
     <div className="banner">
@@ -35,14 +54,35 @@ const Banner = () => {
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyDown={handleSearch}
       />
+      {/* Profile Button */}
+      <button
+        className="create-post"
+        disabled
+        style={{
+          marginLeft: "10px",
+          backgroundColor: "#eee",
+          color: "#333",
+          fontWeight: "bold",
+          cursor: "default"
+        }}
+      >
+        {user ? user.displayName : "Guest"}
+      </button>
 
       {/* Create Post Button */}
       <button
-        className={`create-post ${location.pathname === "/create-post" ? "active" : ""}`}
-        onClick={() => navigate("/create-post")}
+        className={`create-post ${!user ? "disabled" : ""}`}
+        onClick={handleCreatePost}
+        disabled={!user}
       >
         Create Post
       </button>
+      {/* Logout Button if logged in */}
+      {user && (
+        <button className="create-post" onClick={handleLogout} style={{ marginLeft: "10px" }}>
+          Log Out
+        </button>
+      )}
     </div>
   );
 };

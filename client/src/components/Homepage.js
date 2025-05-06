@@ -8,10 +8,15 @@ const HomePage = () => {
   const [posts, setPosts] = useState([]);
   const [sortOrder, setSortOrder] = useState("newest");
   const [communitiesInfo, setCommunitiesInfo] = useState([]);
+  //logged in user
+  const user = JSON.parse(localStorage.getItem("user"));
+  //track split
+  const [joinedPostCount, setJoinedPostCount] = useState(0);
+
 
   useEffect(() => {
         // Retrieve communities, posts, and linkflairs from server
-        var communities = [];
+        //var communities = [];
         axios.get('http://localhost:8000/all-post-cards')
           .then(res => {
             console.log("Backend returned:", res.data);
@@ -26,11 +31,12 @@ const HomePage = () => {
     }
     try{
       const postsData = []
-      const seen = new Set();
+      //const seen = new Set();
       communitiesInfo.forEach(c => {
         c.postIDs.forEach(post => {
             post.communityName = c.name;
             post.communityID = c._id;
+            post.communityMembers = c.members;
             postsData.push(post);
           });
       });
@@ -66,15 +72,50 @@ const HomePage = () => {
               commentCount: commentCount,
               communityName: post.communityName,
               communityID: post.communityID,
+              communityMembers: post.communityMembers,
               linkFlair: post.linkFlairID?.content,
           };
       });
 
-      setPosts(formattedPosts);
+      //split into joined and not-joined
+      let joinedPosts = [];
+      let notJoinedPosts = [];
+
+      if (user && user._id) {
+        formattedPosts.forEach(post => {
+          if (post.communityMembers?.includes(user._id)) {
+            joinedPosts.push(post);
+          } else {
+            notJoinedPosts.push(post);
+          }
+        });
+      } else {
+        joinedPosts = formattedPosts; //guests see all as joined
+      }
+
+
+      // Sorting function
+      const sortFunc = (a, b) => {
+        if (sortOrder === "newest") return b.timestamp - a.timestamp;
+        if (sortOrder === "oldest") return a.timestamp - b.timestamp;
+        if (sortOrder === "active") {
+          const aTime = a.latestComment || a.timestamp;
+          const bTime = b.latestComment || b.timestamp;
+          return bTime - aTime;
+        }
+        return 0;
+      };
+
+      joinedPosts.sort(sortFunc);
+      notJoinedPosts.sort(sortFunc);
+
+      setJoinedPostCount(joinedPosts.length); //boundary for divider
+      setPosts([...joinedPosts, ...notJoinedPosts]);
+
     } catch (error) {
       console.error("Error in useEffect:", error);
     }
-  }, [communitiesInfo])
+  }, [communitiesInfo, sortOrder]);
 
 const sortedPosts = [...posts].sort((a, b) => {
     if (sortOrder === "newest") return b.timestamp - a.timestamp;
@@ -112,8 +153,13 @@ return (
         {sortedPosts.length === 0 ? (
           <p>No posts available.</p>
         ) : (
-          sortedPosts.map((post) => (
-            <Postcard key={post._id} post={post} />
+          sortedPosts.map((post, index) => (
+            <React.Fragment key={post._id}>
+              {index === joinedPostCount && user && (
+                <div className="sublist-divider">Posts from communities you haven’t joined</div>
+              )}
+              <Postcard post={post} />
+            </React.Fragment>
           ))
         )}
       </div>

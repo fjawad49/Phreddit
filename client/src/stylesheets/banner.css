@@ -85,3 +85,9 @@ body {
 .create-post.active {
     background-color: #FF4500;
 }
+
+.create-post.disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+  }  

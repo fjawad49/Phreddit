@@ -115,3 +115,23 @@
     padding: 20px;
     box-sizing: border-box;
   }   
+
+  .create-community-btn.disabled {
+    background-color: #ccc;
+    color: #777;
+    cursor: not-allowed;
+    
+    font-size: 16px;
+    font-family: inherit;
+    font-weight: normal;
+    padding: 8px;
+    border-radius: 5px;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    width: 94%;
+    box-sizing: border-box;
+    border: none;
+    margin-bottom: 5px;
+  }
+  

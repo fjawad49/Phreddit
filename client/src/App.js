@@ -15,6 +15,8 @@ import CommentCreatePage from './components/CommentCreatePage.js';
 import PostPage from './components/PostPage.js';
 import Search from "./components/Search";
 import WelcomePage from './components/WelcomePage.js';
+import RegisterPage from './components/RegisterPage.js';
+import LoginPage from './components/LoginPage';
 import './stylesheets/search.css';
 import { useState } from 'react';
 
@@ -29,6 +31,8 @@ function App() {
             <section className="main-content">
               <Routes>
               <Route path="/" element={<WelcomePage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/home" element={<HomePage />} />
               <Route path="/create-post" element={<PostCreatePage />} />
               <Route path="/create-community" element={<CommunityCreatePage />} />

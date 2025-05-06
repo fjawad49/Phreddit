@@ -33,7 +33,7 @@ export default function Postcard({post, includeCommunity=true}){
     <h3 className="post-title">{post.title}</h3>
     {post.linkFlair && <p className="post-flair">{post.linkFlair}</p>}
     <p className="post-content">{linkedDescription.length > 80 ? linkedDescription.substring(0, 80) + "..." : linkedDescription}</p>
-    <p className="post-stats"><strong>Views:</strong> {post.views} | <strong>Comments:</strong> {post.commentCount}</p>
+    <p className="post-stats"><strong>Views:</strong> {post.views} | <strong>Comments:</strong> {post.commentCount} | <strong>Votes:</strong> {post.voteCount ?? 0} </p>
     </div>
     );
 }

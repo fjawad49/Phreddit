@@ -7,14 +7,35 @@ import axios from 'axios';
 const NavBar = () => {
   const location = useLocation()
   const [loadedCommunities, setLoadedCommunities] = useState([]);
+  const user = JSON.parse(localStorage.getItem("user"));
+
 
   // Ensure communities are loaded into state when received
   useEffect(() => {
     axios.get('http://localhost:8000/communities')
       .then(res => {
-        setLoadedCommunities(res.data)
+        //if user logged in, sort communities so that joined ones appear first
+        if (user && user._id) {
+          const joined = [];
+          const notJoined = [];
+
+          res.data.forEach(comm => {
+            if (comm.members && comm.members.includes(user._id)) {
+              joined.push(comm);
+            } else {
+              notJoined.push(comm);
+            }
+          });
+
+          setLoadedCommunities([...joined, ...notJoined]);
+        } else {
+          //guest user sees original order
+          setLoadedCommunities(res.data);
+        }
       })
-      .catch(err => {console.log("Could not retrieve communities: " + err)});
+      .catch(err => {
+        console.log("Could not retrieve communities: " + err);
+      });
   }, [location]);
   
   const pathname = location.pathname;
@@ -26,7 +47,7 @@ const NavBar = () => {
     <nav className="nav-bar">
       {/* Home Link */}
       <Link 
-        to="/" 
+        to="/home" 
         className={`nav-link ${location.pathname === "/home" ? "active" : ""}`}
       >
         Home
@@ -40,12 +61,19 @@ const NavBar = () => {
         <h3>Communities</h3>
 
         {/* Styled Create Community Button */}
-        <Link
-          to="/create-community" 
-          className={`create-community-btn ${location.pathname === "/create-community" ? "active" : ""}`}
-        >
-          Create Community
-        </Link>
+        {user ? (
+          <Link
+            to="/create-community"
+            className={`create-community-btn ${location.pathname === "/create-community" ? "active" : ""}`}
+          >
+            Create Community
+          </Link>
+        ) : (
+          <button className="create-community-btn disabled" disabled>
+            Create Community
+          </button>
+        )}
+
 
         {/* List of Communities */}
         <ul className="community-list">

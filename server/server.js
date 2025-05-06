@@ -4,6 +4,8 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const bcrypt = require("bcrypt")
+const UserModel = require("./models/users")
 app.use(cors());
 app.use(express.json());
 
@@ -150,9 +152,16 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
 })
 
 app.get("/communities/:communityID", async function (req, res) {
-  console.log("GET /communities/" + req.params.communityID);
+  const { communityID } = req.params;
+
+  // Prevent CastError by validating ObjectId
+  if (!mongoose.Types.ObjectId.isValid(communityID)) {
+    return res.status(400).send("Invalid community ID.");
+  }
+
+  console.log("GET /communities/" + communityID);
   try {
-    const communityDoc = await CommunitiesModel.findById(req.params.communityID);
+    const communityDoc = await CommunitiesModel.findById(communityID);
     if (!communityDoc) {
       return res.status(404).send("Community not found");
     }
@@ -233,6 +242,83 @@ app.post("/post/:postID/new-comment", async function (req, res) {
     res.status(500).send("Failed to add new comment");
   }
 })
+
+app.post("/api/register", async function (req, res) {
+  console.log("POST /api/register");
+  const { firstName, lastName, email, displayName, password } = req.body;
+
+  //basic checks
+  if (!email || !password || !displayName) {
+      return res.status(400).json({ error: "Required fields missing." });
+  }
+
+  //password must not contain personal info
+  const lowerPassword = password.toLowerCase();
+  const forbiddenTerms = [firstName, lastName, displayName, email].filter(Boolean);
+
+  if (forbiddenTerms.some(term => lowerPassword.includes(term.toLowerCase()))) {
+      return res.status(400).json({ error: "Password contains personal info." });
+  }
+
+  try {
+      const existingEmail = await UserModel.findOne({ email });
+      if (existingEmail) {
+          return res.status(400).json({ error: "Email already in use." });
+      }
+
+      const existingDisplay = await UserModel.findOne({ displayName });
+      if (existingDisplay) {
+          return res.status(400).json({ error: "Display name already in use." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new UserModel({
+          firstName,
+          lastName,
+          email,
+          displayName,
+          passwordHash: hashedPassword
+      });
+
+      await newUser.save();
+      res.status(201).json({ message: "User registered successfully." });
+  } catch (err) {
+      console.error("Error in registration:", err);
+      res.status(500).json({ error: "Server error during registration." });
+  }
+});
+
+app.post("/api/login", async function (req, res) {
+  console.log("POST /api/login");
+
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
+
+  try {
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ error: "No account found with that email." });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+
+    if (!passwordMatch) {
+      return res.status(400).json({ error: "Incorrect password." });
+    }
+
+    //exclude passwordHash from response
+    const { passwordHash, ...safeUser } = user.toObject();
+    res.status(200).json(safeUser);
+
+  } catch (err) {
+    console.error("Error during login:", err);
+    res.status(500).json({ error: "Server error during login." });
+  }
+});
 
 const server = app.listen(8000, () => {console.log("Server listening on port 8000...");});
 
