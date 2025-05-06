@@ -1,0 +1,49 @@
+import "../stylesheets/forms.css";
+import React, { useState } from "react";
+import {TextBox, validateLinks} from "./FormComponents";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+export default function CommunityCreatePage() {
+    const navigate = useNavigate();
+    const [error, setError] = useState('');
+
+
+    async function handleForm(e){
+        e.preventDefault();
+        const data = new FormData(e.target);
+        const description = data.get("Community Description");
+        const links = validateLinks(description);
+        if (!links.success){
+            setError(links.error);
+        }else{
+            const newComm = {
+                name: data.get("Community Name"),
+                description: data.get("Community Description"),
+                postIDs: [],
+                startDate: new Date(),
+                members: [data.get("Username")],
+                memberCount: 1,
+            }
+            try {
+                const res = await axios.post(`http://localhost:8000/new-community/`, newComm);
+                const community = res.data;
+                console.log(community);
+                await navigate(`/${encodeURIComponent(community._id)}`);
+            } catch (err) {
+                console.error("Community creation failed:", err);
+                setError("Failed to create community");
+            }
+        }
+    }
+
+    return(
+        <form className="create-page" id="create-community-form" onSubmit={handleForm}>
+            <TextBox name="Community Name" maxchars="100" placeholder="Name...(Max 100 Characters)"/>
+            <TextBox multiline={true} maxchars="500" name="Community Description" placeholder="Description...(Max 500 Characters)"/>
+            <span style={{color: "red", display: "block"}}>{error ? (`${error}`) : ('')}</ span>
+            <TextBox name="Username" placeholder="Username..."/>
+            <input className="submit-button" type="submit" value="Engender Community" />
+        </ form>
+    );
+}

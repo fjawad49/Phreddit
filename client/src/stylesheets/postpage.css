@@ -1,0 +1,90 @@
+.post-container {
+    display: flex;
+    flex-direction: column;
+    margin-top: 55px;
+    padding: 0px 20px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: bold;
+    display: block;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.post-card {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: white;
+    border-bottom: 1px dotted black;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.post-meta {
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 5px;
+}
+
+/* Link Flair */
+.post-flair {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #ff4500;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    margin-top: 0px;
+}
+
+div .post-content {
+    font-size: 16px;
+    color: black;
+}
+
+/* Affix Add Comment button for expanded post */
+.add-comment {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    background-color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-comment:hover {
+    background-color: #b4aba7;
+}
+
+/* Comment Metadata */
+.comment-meta {
+    font-size: 14px;
+    color: #777;
+    margin-top: 5px;
+    border-left: solid;
+    border-color: black;
+    padding-left: 3px;
+
+}
+
+/* Comment Metadata */
+.comment-content {
+    margin-bottom: 3px;
+    border-left: solid;
+    padding-left: 3px;
+}
+
+/* Views and Comments */
+.post-stats {
+    font-size: 13px;
+    color: grey;
+    margin-top: 5px;
+    margin-bottom: 0px;
+}

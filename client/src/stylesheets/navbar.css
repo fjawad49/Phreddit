@@ -1,0 +1,117 @@
+/* Sidebar Navigation Bar */
+.nav-bar {
+    width: 230px; /* Fixed width */
+    background-color: white;
+    padding: 10px 10px;
+    border-right: 1px solid black;
+    height: calc(100vh - 60px); /* Adjust height to not overlap the title */
+    position: fixed;
+    top: 60px; /* Push it below the banner */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center all buttons */
+  }
+  
+  
+  /* Navigation Link Buttons */
+  .nav-link {
+    display: block;
+    padding: 8px;
+    text-decoration: none;
+    color: black;
+    background-color: lightgray;
+    border-radius: 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 15px;
+    border: none;
+    width: 90%; /* Match community button width */
+    transition: background-color 0.3s;
+  }
+  
+  /* Active Link (Current Page) */
+  .nav-link.active {
+    background-color: #FF4500; /* Phreddit reddish-orange for the active page */
+  }
+  
+  /* Hover Effect (Highlight when hovered) */
+  .nav-link:hover,
+  .nav-link:focus {
+    background-color: #FF4500; /* Change to reddish-orange when hovered */
+  }
+  
+  /* Sidebar Divider */
+  .nav-divider {
+    border: none;
+    height: 1px;
+    background-color: black;
+    margin: 5px 0;
+    width: 90%;
+  }
+  
+  /* Community Section Styling */
+  .communities-section {
+    margin-top: -7px;
+    width: 100%;
+    text-align: left;
+  }
+  
+  /* Create Community Button */
+  .create-community-btn {
+    display: block;
+    background-color: lightgray;
+    color: black;
+    padding: 8px;
+    text-align: center;
+    border-radius: 5px;
+    text-decoration: none;
+    border: none;
+    transition: background-color 0.3s;
+    margin-bottom: 5px;
+    width: 90%;
+  }
+  
+  .create-community-btn:hover {
+    background-color: #FF4500;
+  }
+  
+  /* Community List */
+  .community-list {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  /* Community Links */
+  .community-link {
+    display: block;
+    padding: 5px;
+    text-decoration: none;
+    color: black;
+    border-radius: 5px;
+    background-color: lightgray;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    text-align: center;
+    margin-bottom: 8px;
+    width: 90%;
+  }
+  
+  .create-community-btn.active, .community-link.selected {
+    background-color: #FF4500;
+  }
+  
+  .community-link:hover {
+    background-color: #FF4500;
+  }
+  
+  
+  /* Fix Main Content to Match Sidebar */
+  
+  .main-content {
+    margin-left: 230px; /* Same as sidebar width */
+    width: calc(100% - 230px); /* Ensure content does not overlap */
+    padding: 20px;
+    box-sizing: border-box;
+  }   

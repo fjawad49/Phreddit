@@ -1,0 +1,71 @@
+form {
+    margin-top: 50px;
+}
+
+/* For all entry forms*/
+.entryfield, textarea{
+    font-family:'Times New Roman', Times, serif;
+    width: 50%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Makes it oval-shaped */
+    font-size: 18px;
+    text-align: start;
+    white-space: pre-wrap;
+}
+.entryfield::placeholder {
+    color: #888;
+}
+
+/* Allows for padding between text fields */
+label {
+    font-family:'Times New Roman', Times, serif;
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 25px;
+}  
+
+ /* Indicates that a field is required*/
+label.star:after {
+    content: "*";
+    color: red;
+}
+
+/* Creates submit button at bottom right of form */
+.submit-button{
+    background-color: grey;
+    color: white;
+    border: none;
+    float: right;
+    margin: 50px;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.submit-button:hover {
+    background-color: #FF4500;
+}
+
+/* Add styling to dropdown menus */
+select {
+    background-color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.create-page {
+    margin-left: 30px;
+}
+
+select{
+    margin-left: 10px;
+}
+
+.default-drop-down {
+    color: gray
+}

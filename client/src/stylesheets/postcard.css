@@ -1,0 +1,89 @@
+/* Post Count */
+.post-count {
+    padding-bottom: 5px;
+    margin-top: 2px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid black;
+}
+
+/* Post Listing Scrollable Section */
+.post-listing {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+    padding-right: 10px;
+}
+
+/* Individual Post Item */
+.post-item {
+    padding: 12px;
+    border: 1px dotted black; /* Dotted black border around posts */
+    cursor: pointer;
+    background-color: #f9f9f9; /* Subtle gray background */
+    border-radius: 6px; /* Rounded corners */
+    margin-bottom: 12px; /* Spacing between posts */
+    transition: background 0.2s ease-in-out;
+}
+
+.post-item:hover {
+    background-color: #e6e6e6;
+}
+
+/* Community Name, Username, and Timestamp */
+.post-meta {
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 4px;
+    margin-top: 0px;
+}
+
+/* Post Title */
+.post-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+/* Link Flair */
+.post-flair {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #ff4500;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    margin-top: 0px;
+}
+
+/* Post Content */
+.post-content {
+    margin: 5px 0;
+    color: #555;
+}
+
+/* Views and Comments */
+.post-stats {
+    font-size: 13px;
+    color: grey;
+    margin-top: 5px;
+    margin-bottom: 0px;
+}
+
+/* Thin Dotted Line Between Posts */
+.post-item + .post-item {
+    border-top: 1px dotted black;
+    padding-top: 12px;
+}
+
+/* Scrollbar Customization */
+.post-listing::-webkit-scrollbar {
+    width: 8px;
+}
+
+.post-listing::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 4px;
+}
