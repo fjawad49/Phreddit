@@ -8,8 +8,9 @@ const HomePage = () => {
   const [posts, setPosts] = useState([]);
   const [sortOrder, setSortOrder] = useState("newest");
   const [communitiesInfo, setCommunitiesInfo] = useState([]);
+  const [userCommunities, setUserCommunities] = useState(null);
   //logged in user
-  const user = localStorage.getItem("user");
+  const user = JSON.parse(localStorage.getItem("user"));
   //track split
   const [joinedPostCount, setJoinedPostCount] = useState(0);
 
@@ -26,17 +27,27 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
-    if (communitiesInfo.length < 1){
+    if(user){
+      axios.get('http://localhost:8000/user-communities', { withCredentials: true })
+        .then(res =>
+          {setUserCommunities(res.data.map(community => community.name))}
+        )
+        .catch(err => {console.log(err)})
+    }
+  }, [])
+
+  useEffect(() => {
+    if (communitiesInfo.length < 1 || (user && userCommunities === null)){
       return
     }
     try{
       const postsData = []
+
       //const seen = new Set();
       communitiesInfo.forEach(c => {
         c.postIDs.forEach(post => {
             post.communityName = c.name;
             post.communityID = c._id;
-            post.communityMembers = c.members;
             postsData.push(post);
           });
       });
@@ -83,7 +94,7 @@ const HomePage = () => {
 
       if (user && user._id) {
         formattedPosts.forEach(post => {
-          if (post.communityMembers?.includes(user._id)) {
+          if (userCommunities.includes(post.communityName)) {
             joinedPosts.push(post);
           } else {
             notJoinedPosts.push(post);
@@ -111,7 +122,7 @@ const HomePage = () => {
 
       setJoinedPostCount(joinedPosts.length); //boundary for divider
       setPosts([...joinedPosts, ...notJoinedPosts]);
-
+      console.log([joinedPosts])
     } catch (error) {
       console.error("Error in useEffect:", error);
     }
@@ -155,6 +166,9 @@ return (
         ) : (
           sortedPosts.map((post, index) => (
             <React.Fragment key={post._id}>
+              {index === 0 && user && joinedPostCount !== 0 && (
+                <div className="sublist-divider">Posts from your communities</div>
+              )}
               {index === joinedPostCount && user && (
                 <div className="sublist-divider">Posts from communities you haven’t joined</div>
               )}

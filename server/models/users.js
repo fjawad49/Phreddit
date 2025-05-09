@@ -1,5 +1,7 @@
 // User Document Schema
 const mongoose = require('mongoose');
+const communities = require('./communities');
+const { Schema } = mongoose;
 
 const UserSchema = new mongoose.Schema({
     email: { 
@@ -27,7 +29,13 @@ const UserSchema = new mongoose.Schema({
     role:{
         type: String, 
         enum: ['user', 'admin'], 
-        default: "user"}
+        default: "user"
+    },
+    communities: [{
+        type: Schema.Types.ObjectId,
+        ref: "Community",
+        default: []
+    }]
 });
 
 module.exports = mongoose.model('User', UserSchema);

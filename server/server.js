@@ -24,7 +24,7 @@ db.on('connected', function() {
 
 app.use(express.urlencoded({ extended: false }));
 
-const tenMinutes = 1000 * 10;
+const tenMinutes = 1000 * 1000;
 
 app.use(
   session({
@@ -338,21 +338,54 @@ app.post("/login", async function (req, res) {
       return res.status(400).json({ error: "No account found with that email." });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-
-    if (!passwordMatch) {
+    const verdict = await bcrypt.compare(password, user.passwordHash);
+    if (!verdict) {
       return res.status(400).json({ error: "Incorrect password." });
     }
 
-    //exclude passwordHash from response
-    const { passwordHash, ...safeUser } = user.toObject();
-    res.status(200).json(safeUser);
+    req.session.user = user.displayName.trim();
+      req.session.save(function (err) {
+        if (err) {
+            return next(err);
+        }
+        //exclude passwordHash from response
+        const { passwordHash, ...safeUser } = user.toObject();
+        res.status(200).json(safeUser);
+    });
+
 
   } catch (err) {
     console.error("Error during login:", err);
     res.status(500).json({ error: "Server error during login." });
   }
 });
+
+app.get("/logout", async function (req, res) {
+  console.log("GET /logout");
+  req.session.destroy(err => {
+      if (err) {
+          res.status(500).json({ error: "Server error logging out." });
+      }
+  });
+  console.log("done")
+  res.status(200).send("Logout successful.")
+})
+
+app.get("/user-communities", async function (req, res) {
+  console.log("GET /user-communities");
+    console.log(req.session)
+
+  if (req.session.user){
+    try{
+      const user = await UserModel.findOne({displayName : req.session.user}).populate("communities")
+      res.status(200).json(user.communities)
+    } catch(err){
+      res.status(500).send("Server error returning user communities.")
+    }
+  }else{
+    res.status(400).send("No valid session found.")
+  }
+})
 
 const server = app.listen(8000, () => {console.log("Server listening on port 8000...");});
 

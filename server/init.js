@@ -123,6 +123,9 @@ async function init() {
         createdBy: adminUser._id,
         members: [adminUser._id, ...regularUsers.map(u => u._id)]
       });
+    
+    adminUser.communities.push(community._id)
+    await adminUser.save()
 
   //create post that includes nested comments and flair
   const post = await Post.create({

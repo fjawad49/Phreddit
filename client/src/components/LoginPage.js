@@ -29,7 +29,7 @@ export default function LoginPage() {
 
         if (res.status === 200) {
             console.log(res.data)
-            localStorage.setItem("user", res.data); //store user info
+            localStorage.setItem("user", JSON.stringify(res.data)); //store user info
             navigate("/home");
         } else {
             setError(res.data.error || "Login failed.");

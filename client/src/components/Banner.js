@@ -1,19 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom"; // For navigation
 import "../stylesheets/banner.css";
+import axios from "axios";
 
 const Banner = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
+  
+  const user = JSON.parse(localStorage.getItem("user"));
+  console.log(localStorage.getItem("user"))
+
   const pathname = location.pathname;
   if (pathname === "/" || pathname === "/register" || pathname === "/login"){
     return (<></>)
   }
-
-  //check login state
-  const user = localStorage.getItem("user");
 
   // Handle search on Enter key press
   const handleSearch = (e) => {
@@ -28,11 +30,15 @@ const Banner = () => {
   };
 
   //logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
       localStorage.removeItem("user");
-      navigate("/");
+      console.log("logging out")
+      const res = await axios.get("http://localhost:8000/logout")
+      console.log("success")
+      navigate("/")
     } catch (err) {
+      console.log("failure")
       alert("Logout failed. Please try again.");
     }
   };
