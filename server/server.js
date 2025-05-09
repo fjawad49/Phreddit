@@ -5,8 +5,11 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const bcrypt = require("bcrypt")
-const UserModel = require("./models/users")
-app.use(cors());
+const UserModel = require("./models/users");
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
+
+app.use(cors({origin: "http://localhost:3000", credentials:true}));
 app.use(express.json());
 
 let mongoose = require('mongoose');
@@ -18,6 +21,20 @@ db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 db.on('connected', function() {
   console.log('Connected to database');
 });
+
+app.use(express.urlencoded({ extended: false }));
+
+const tenMinutes = 1000 * 10;
+
+app.use(
+  session({
+    secret: "treesfloorcat2020shakespeareuniverseoctagon",
+    cookie: {httpOnly: true, maxAge: tenMinutes},
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: 'mongodb://127.0.0.1:27017/sessions'})
+  })
+);
 
 const CommunitiesModel = require("./models/communities.js");
 const PostsModel = require("./models/posts.js");
@@ -43,6 +60,9 @@ app.get("/all-post-cards", async function (req, res) {
               if (post.linkFlairID){
                 post.linkFlairID = await LinkFlairsModel.findById(post.linkFlairID);
               }
+              if (post.postedBy){
+                post.postedBy = await UserModel.findById(post.postedBy);
+              }
               if (post.commentIDs.length > 0) {
                 post.commentIDs = await Promise.all(    
                   post.commentIDs.map(populateComments)
@@ -53,6 +73,10 @@ app.get("/all-post-cards", async function (req, res) {
       }
     })
   );
+
+  // Affix postedBy User object to map to only displayName, preventing access to hashedPasswords ands sensitive information
+  communities = communities.map((community) => community.toObject());
+  communities.forEach(community => community.postIDs.forEach(post => post.postedBy = post.postedBy.displayName))
   res.send(communities);
 });
 
@@ -68,7 +92,7 @@ app.get("/:communityID/post/:postID", async function (req, res) {
     }
 
     console.log("Looking for post:", postID);
-    const post = await PostsModel.findById(postID);
+    var post = await PostsModel.findById(postID);
     if (!post) {
       console.error("Post not found");
       return res.status(404).send("Post not found");
@@ -81,12 +105,20 @@ app.get("/:communityID/post/:postID", async function (req, res) {
       post.linkFlairID = await LinkFlairsModel.findById(post.linkFlairID);
     }
 
+    if (post.postedBy){
+      post.postedBy = await UserModel.findById(post.postedBy);
+    }
+
     if (post.commentIDs.length > 0) {
       post.commentIDs = await Promise.all(    
         post.commentIDs.map(populateComments)
       )
     }
 
+    post = post.toObject()
+    console.log(post)
+
+    post.postedBy = post.postedBy.displayName
     res.json({ post: post, commName: community.name});
 
   } catch (err) {
@@ -243,12 +275,14 @@ app.post("/post/:postID/new-comment", async function (req, res) {
   }
 })
 
-app.post("/api/register", async function (req, res) {
-  console.log("POST /api/register");
+const saltRounds = 10; 
+
+app.post("/register", async function (req, res) {
+  console.log("POST /register");
   const { firstName, lastName, email, displayName, password } = req.body;
 
   //basic checks
-  if (!email || !password || !displayName) {
+  if (!firstName || !lastName || !email || !password || !displayName) {
       return res.status(400).json({ error: "Required fields missing." });
   }
 
@@ -270,8 +304,8 @@ app.post("/api/register", async function (req, res) {
       if (existingDisplay) {
           return res.status(400).json({ error: "Display name already in use." });
       }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const salt = await bcrypt.genSalt(saltRounds);
+      const hashedPassword = await bcrypt.hash(password, salt);
       const newUser = new UserModel({
           firstName,
           lastName,
@@ -288,8 +322,8 @@ app.post("/api/register", async function (req, res) {
   }
 });
 
-app.post("/api/login", async function (req, res) {
-  console.log("POST /api/login");
+app.post("/login", async function (req, res) {
+  console.log("POST /login");
 
   const { email, password } = req.body;
 

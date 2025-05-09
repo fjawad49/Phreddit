@@ -1,7 +1,7 @@
 import {useState} from "react"
 import { useNavigate } from "react-router-dom";
-import { registerUser } from "./Api";
 import "../stylesheets/forms.css";
+import axios from 'axios'
 
 export default function RegisterPage() {
     const navigate = useNavigate();
@@ -32,28 +32,37 @@ export default function RegisterPage() {
         const { firstName, lastName, email, displayName, password, confirmPassword } = formData;
 
         //client-side validation
-        if (!email.includes("@")) return setError("Invalid email format.");
-        if (password !== confirmPassword) return setError("Passwords do not match.");
+        if (firstName === "") 
+            return setError("First name field cannot be empty.");
+        if (lastName === "") 
+            return setError("Last name field cannot be empty.");
+        if (!email.includes("@")) 
+            return setError("Invalid email format.");
+        if (displayName === "") 
+            return setError("Please enter a valid display name.");
+        if (password === "")
+            return setError("Password cannot be empty.");
+        if (password !== confirmPassword) 
+            return setError("Passwords do not match.");
         if ([firstName, lastName, displayName, email].some(term => password.includes(term)))
             return setError("Password cannot contain your name, display name, or email.");
-
+        var res;
         try {
-            const response = await registerUser({ firstName, lastName, email, displayName, password });
-            const result = await response.json();
-        
-            if (response.ok) {
+            res = await axios.post("http://localhost:8000/register", { firstName, lastName, email, displayName, password }, {withCredentials: true})
+            if (res.status === 201) {
                 navigate("/"); //back to welcome
             } else {
-                setError(result.error || "Registration failed.");
+                return setError(res.data.error || "Registration failed.");
             }
         } catch (err) {
-            setError("Server error.");
+            return setError(err.response.data.error);
         }        
     };
 
     return (
         <form className="create-page" onSubmit={validateAndSubmit}>
           <h2>Create Account</h2>
+          <p style={{marginLeft: "15px" , color: "red", fontSize: "14px"}}>All fields are mandatory</p>
           {error && <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>}
       
           <input

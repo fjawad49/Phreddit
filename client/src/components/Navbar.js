@@ -7,7 +7,7 @@ import axios from 'axios';
 const NavBar = () => {
   const location = useLocation()
   const [loadedCommunities, setLoadedCommunities] = useState([]);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = localStorage.getItem("user");
 
 
   // Ensure communities are loaded into state when received
@@ -39,7 +39,7 @@ const NavBar = () => {
   }, [location]);
   
   const pathname = location.pathname;
-  if (pathname === "/"){
+  if (pathname === "/" || pathname === "/register" || pathname === "/login"){
     return (<></>)
   }
 

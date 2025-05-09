@@ -9,7 +9,7 @@ const HomePage = () => {
   const [sortOrder, setSortOrder] = useState("newest");
   const [communitiesInfo, setCommunitiesInfo] = useState([]);
   //logged in user
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = localStorage.getItem("user");
   //track split
   const [joinedPostCount, setJoinedPostCount] = useState(0);
 

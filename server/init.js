@@ -66,21 +66,21 @@ async function init() {
   //create regular users
   const regularUsers = await User.insertMany([
     {
-      email: 'user1@example.com',
-      displayName: 'october',
-      passwordHash: await bcrypt.hash('password102', 10),
+      email: 'user1@gmail.com',
+      displayName: 'jules234',
+      passwordHash: await bcrypt.hash('imthe104', 10),
       reputation: 100
     },
     {
-      email: 'user2@example.com',
-      displayName: 'november',
-      passwordHash: await bcrypt.hash('password112', 10),
+      email: 'user2@icloud.com',
+      displayName: 'wonderz',
+      passwordHash: await bcrypt.hash('pswrd22', 10),
       reputation: 100
     },
     {
-      email: 'user3@example.com',
-      displayName: 'december',
-      passwordHash: await bcrypt.hash('password122', 10),
+      email: 'user3@yahoo.com',
+      displayName: 'XxhelloxX',
+      passwordHash: await bcrypt.hash('baller10', 10),
       reputation: 100
     }
   ]);
@@ -99,19 +99,19 @@ async function init() {
   //create nested comment structure: A → B → C
   const commentC = await Comment.create({
     content: 'Nested reply',
-    commentedBy: userMap['december'].displayName, //third-level comment
+    commentedBy: userMap['XxhelloxX'].displayName, //third-level comment
     commentIDs: []
   });
 
   const commentB = await Comment.create({
     content: 'Reply to A',
-    commentedBy: userMap['october'].displayName, //second-level comment
+    commentedBy: userMap['jules234'].displayName, //second-level comment
     commentIDs: [commentC._id] //references commentC as its child
   });
 
   const commentA = await Comment.create({
     content: 'Top-level comment',
-    commentedBy: userMap['november'].displayName, //top-level comment
+    commentedBy: userMap['wonderz'].displayName, //top-level comment
     commentIDs: [commentB._id] //references commentB as its child
   });
 
@@ -128,12 +128,12 @@ async function init() {
   const post = await Post.create({
     title: 'Test Post Title',
     content: 'This is a seeded post.',
-    postedBy: userMap['november']._id, //post author
+    postedBy: userMap['wonderz']._id, //post author
     communityId: community._id, //set after community creation
     views: 42,
     voteCount: 2,
-    upvoters: [userMap['october']._id],
-    downvoters: [userMap['december']._id],
+    upvoters: [userMap['jules234']._id],
+    downvoters: [userMap['XxhelloxX']._id],
     linkFlairID: flairs[0]._id,
     commentIDs: [commentA._id] //top-level comment thread
   });

@@ -8,12 +8,12 @@ const Banner = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const pathname = location.pathname;
-  if (pathname === "/"){
+  if (pathname === "/" || pathname === "/register" || pathname === "/login"){
     return (<></>)
   }
 
   //check login state
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = localStorage.getItem("user");
 
   // Handle search on Enter key press
   const handleSearch = (e) => {

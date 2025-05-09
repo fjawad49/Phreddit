@@ -2,6 +2,7 @@ import {useState} from "react"
 import { useNavigate } from "react-router-dom";
 import "../stylesheets/forms.css";
 import {loginUser} from "./Api";
+import axios from 'axios';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -24,19 +25,20 @@ export default function LoginPage() {
     const { email, password } = formData;
 
     try {
-        const res = await loginUser({ email, password });
-        const data = await res.json();
+        const res = await axios.post("http://localhost:8000/login", { email, password }, {withCredentials: true})
 
-        if (res.ok) {
-            localStorage.setItem("user", JSON.stringify(data)); //store user info
+        if (res.status === 200) {
+            console.log(res.data)
+            localStorage.setItem("user", res.data); //store user info
             navigate("/home");
         } else {
-            setError(data.error || "Login failed.");
+            setError(res.data.error || "Login failed.");
         }
-        } catch (err) {
-        setError("Server error during login.");
-        }
-    };
+    } catch (err) {
+      console.log(err)
+      setError(err.response.data.error);
+    }
+  };
 
   return (
     <form className="create-page" onSubmit={handleSubmit}>
