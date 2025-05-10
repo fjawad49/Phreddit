@@ -32,9 +32,12 @@ const HomePage = () => {
         .then(res =>
           {setUserCommunities(res.data.map(community => community.name))}
         )
-        .catch(err => {console.log(err)})
+        .catch(err => {
+          console.log("Could not fetch user communities:",err);
+          setUserCommunities([]);
+        });
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (communitiesInfo.length < 1 || (user && userCommunities === null)){

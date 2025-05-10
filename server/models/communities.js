@@ -22,8 +22,9 @@ const communitySchema = new Schema({
     default: Date.now
   },
   createdBy: {
-    type: String
-
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
   },
   members: [{
     type: Schema.Types.ObjectId,

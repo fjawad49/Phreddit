@@ -120,7 +120,7 @@ async function init() {
         name: 'Community1',
         description: 'Its spring!',
         postIDs: [],
-        createdBy: adminUser._id,
+        creatorID: adminUser._id,
         members: [adminUser._id, ...regularUsers.map(u => u._id)]
       });
     

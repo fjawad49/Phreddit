@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import Postcard from "./Postcard"; 
 import "./../stylesheets/search.css";
-import { getAllChildComments, getEarliestDate } from "./CommentThread.js";
+//import { getAllChildComments, getEarliestDate } from "./CommentThread.js";
 import axios from 'axios';
 
 const SearchResults = () => {
@@ -10,27 +10,34 @@ const SearchResults = () => {
   const queryParams = new URLSearchParams(location.search);
   const searchQuery = queryParams.get("q"); //query from URL
 
+  const [error, setError] = useState(null);
+
+
   // List of stop words to exclude
-  const stopWords = ["is", "the", "a", "an", "of", "to", "and", "in", "on", "for", "at", "by", "with", "about", "as", "not", "this"];
+  //const stopWords = ["is", "the", "a", "an", "of", "to", "and", "in", "on", "for", "at", "by", "with", "about", "as", "not", "this"];
 
   // Function to clean search query by removing stop words
-  const cleanSearchQuery = (query) => {
-    return query
-      ? query
-          .toLowerCase()
-          .split(" ")
-          .filter(word => !stopWords.includes(word))
-          .join(" ")
-      : "";
-  };
+  //const cleanSearchQuery = (query) => {
+    //return query
+      //? query
+        //  .toLowerCase()
+          //.split(" ")
+          //.filter(word => !stopWords.includes(word))
+          //.join(" ")
+      //: "";
+  //};
 
-  const cleanedQuery = cleanSearchQuery(searchQuery);
+  //const cleanedQuery = cleanSearchQuery(searchQuery);
 
   //hold all post/community info fetched from backend
-  const [communitiesInfo, setCommunitiesInfo] = useState([]);
+  //const [communitiesInfo, setCommunitiesInfo] = useState([]);
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [sortType, setSortType] = useState("newest");
+  const [userCommunities, setUserCommunities] = useState([]);
+  const [joinedCount, setJoinedCount] = useState(0);
+  const user = JSON.parse(localStorage.getItem("user")); //already logged-in?
 
+  /*
   //fetch all community/post data
   useEffect(() => {
     axios.get("http://localhost:8000/all-post-cards")
@@ -39,8 +46,10 @@ const SearchResults = () => {
       })
       .catch((err) => {
         console.error("Failed to fetch post data:", err);
+        setError("A system error occurred while loading search results.");
       });
   }, []);
+  
 
   //filter posts based on query
   useEffect(() => {
@@ -78,7 +87,7 @@ const SearchResults = () => {
         
       });
     });
-
+    
     //matched post to be displayed in Postcard
     const formattedPosts = matchedPosts.map((post) => {
       let commentCount = 0;
@@ -100,30 +109,106 @@ const SearchResults = () => {
         communityName: post.communityName,
         communityID: post.communityID,
         linkFlair: post.linkFlair?.content,
+        voteCount: post.voteCount
       };
     });
 
     setFilteredPosts(formattedPosts);
   }, [communitiesInfo, cleanedQuery]);
 
-  //sorting logic
-  const sortedPosts = [...filteredPosts].sort((a, b) => {
-    if (sortType === "newest") return b.timestamp - a.timestamp;
-    if (sortType === "oldest") return a.timestamp - b.timestamp;
-    if (sortType === "active") {
-      const aLatest = a.latestComment || a.timestamp;
-      const bLatest = b.latestComment || b.timestamp;
-      return bLatest - aLatest;
+  */
+
+  useEffect(() => {
+    if (!searchQuery) {
+      setError("Missing search term.");
+      return;
     }
-    return 0;
-  });
+  
+    const fetchData = async () => {
+      try {
+        let joined = [];
+  
+        if (user) {
+          const res = await axios.get("http://localhost:8000/user-communities", { withCredentials: true });
+          joined = res.data.map(comm => comm.name);
+          setUserCommunities(joined);
+        }
+  
+        const res = await axios.get(`http://localhost:8000/search?q=${searchQuery}`);
+        const formattedPosts = res.data.map(post => {
+          let commentCount = post.commentIDs?.length ?? 0;
+          return {
+            ...post,
+            timestamp: new Date(post.postedDate),
+            latestComment: null,
+            commentCount,
+            communityName: post.communityId?.name || "",
+            communityID: post.communityId?._id || post.communityId,
+            linkFlair: post.linkFlairID?.content,
+            voteCount: post.voteCount,
+            views: post.views
+          };
+        });
+  
+        //group posts by joined/unjoined
+        let joinedPosts = [];
+        let notJoinedPosts = [];
+  
+        if (user && joined.length > 0) {
+          formattedPosts.forEach(post => {
+            if (joined.includes(post.communityName)) {
+              joinedPosts.push(post);
+            } else {
+              notJoinedPosts.push(post);
+            }
+          });
+        } else {
+          joinedPosts = formattedPosts;
+        }
+
+        //sort joinedPosts and notJoinedPosts separately
+        const sortFunc = (a, b) => {
+          if (sortType === "newest") return b.timestamp - a.timestamp;
+          if (sortType === "oldest") return a.timestamp - b.timestamp;
+          if (sortType === "active") {
+            const aLatest = a.latestComment || a.timestamp;
+            const bLatest = b.latestComment || b.timestamp;
+            return bLatest - aLatest;
+          }
+          return 0;
+        };
+
+        joinedPosts.sort(sortFunc);
+        notJoinedPosts.sort(sortFunc);
+
+
+        setJoinedCount(joinedPosts.length);
+        setFilteredPosts([...joinedPosts, ...notJoinedPosts]);
+      } catch (err) {
+        console.error("Search or user-community fetch failed:", err);
+        setError("A system error occurred while loading search results.");
+      }
+    };
+    fetchData();
+  }, [searchQuery, sortType]);  
+
+
+  if (error) {
+    return (
+      <div className="error-screen">
+        <h2>Error</h2>
+        <p>{error}</p>
+        <button onClick={() => window.location.href = "/"}>Return to Welcome Page</button>
+      </div>
+    );
+  }  
 
   return (
     <div className="homepage-container">
       {/* Search Header with Sorting Buttons */}
       <div className="homepage-header">
         <h2>
-          {sortedPosts.length === 0
+          {filteredPosts.length === 0
             ? `No results found for: "${searchQuery}"`
             : `Search Results for "${searchQuery}"`}
         </h2>
@@ -153,10 +238,20 @@ const SearchResults = () => {
 
       {/* Post Listings */}
       <div className="post-listing">
-        {sortedPosts.length === 0 ? (
+        {filteredPosts.length === 0 ? (
           <p>Oops! We couldn't find any results. Try a different search.</p>
         ) : (
-          sortedPosts.map(post => <Postcard key={post.postID} post={post} />)
+          filteredPosts.map((post, index) => (
+            <React.Fragment key={post._id}>
+              {index === 0 && user && userCommunities.length > 0 && (
+                <div className="sublist-divider">Posts from your communities</div>
+              )}
+              {index === userCommunities.length && user && (
+                <div className="sublist-divider">Posts from communities you haven’t joined</div>
+              )}
+              <Postcard post={post} />
+            </React.Fragment>
+          ))          
         )}
       </div>
     </div>

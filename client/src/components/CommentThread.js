@@ -6,7 +6,7 @@ import { validateLinks } from "./FormComponents";
 import TimeStamp from "./TimeStamp";
 import axios from 'axios';
 
-export default function CommentThread ( {cID, pID, comment, level = 0} ){
+export default function CommentThread ( {cID, pID, comment, level = 0, hideReply = false, showVoteCount = false, hideVoting = false} ){
   const [childComments, setChildComments] = useState([]);
   
   useEffect(() => {
@@ -15,17 +15,20 @@ export default function CommentThread ( {cID, pID, comment, level = 0} ){
   }, [comment])
   return (
     <>
-      <Comment key={comment._id} cID={cID} pID={pID} comment={comment} level={level} />
+      <Comment key={comment._id} cID={cID} pID={pID} comment={comment} level={level} hideReply={hideReply} showVoteCount={showVoteCount} hideVoting={hideVoting} />
       {childComments.map((child) => (
-        <CommentThread key={child._id} cID={cID} pID={pID} comment={child} level={level + 1} />
+        <CommentThread key={child._id} cID={cID} pID={pID} comment={child} level={level + 1} hideReply={hideReply} showVoteCount={showVoteCount} hideVoting={hideVoting} />
       ))}
     </>
   );
 }
 
-function Comment ( {cID, pID, comment, level} ) {
+function Comment ( {cID, pID, comment, level, hideReply, showVoteCount, hideVoting} ) {
   const navigate = useNavigate();
   const [linkedDescription, setLinkedDescription] = useState([]);
+  const [voteCount, setVoteCount] = useState(comment.voteCount || 0);
+  const [error, setError] = useState(null);
+  const user = JSON.parse(localStorage.getItem("user"));
 
   const handleReply = () => {
       navigate(`/${cID}/posts/${pID}/comment/${comment._id}/reply`);
@@ -48,14 +51,55 @@ function Comment ( {cID, pID, comment, level} ) {
       setLinkedDescription(description)
   }, [comment]);
 
+  const vote = async (type) => {
+    if (!user || user.reputation < 50) {
+      setError("Voting requires an account with reputation ≥ 50.");
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `http://localhost:8000/vote/comment/${comment._id}`,
+        {
+          voterID: user._id,
+          voteType: type,
+        }
+      );
+
+      setVoteCount(res.data.updatedVoteCount);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err.response?.data?.message || "Voting failed. Try again later."
+      );
+    }
+  };
+
   return (
-      <div key={comment._id} style={{marginLeft: `${level * 20}px`}}>
-          <div className="comment-meta">{comment.commentedBy} • {TimeStamp(new Date(comment.commentedDate))}</div>
-          <div className="comment-content">{linkedDescription}</div>
+    <div key={comment._id} className="comment-container" style={{ marginLeft: `${level * 20}px` }}>
+      {!hideVoting && (
+        <div className="vote-column">
+          <button className="vote-button" onClick={() => vote("upvote")}>▲</button>
+          <div className="vote-count">{voteCount}</div>
+          <button className="vote-button" onClick={() => vote("downvote")}>▼</button>
+        </div>
+      )}
+      <div className="comment-body">
+        <div className="comment-meta">
+          {comment.commentedBy} • {TimeStamp(new Date(comment.commentedDate))}
+          {showVoteCount && (
+            <span className="vote-count"> • Votes: {voteCount}</span>
+          )}
+        </div>
+        <div className="comment-content">{linkedDescription}</div>
+        {!hideReply && (
           <button className="reply-button" onClick={handleReply}>Reply</button>
+        )}
+        {error && <div className="error-text">{error}</div>}
       </div>
+    </div>
   );
-}
+}  
 
 export function getEarliestDate(comment, increment){
     let earliestDate = comment.commentedDate;

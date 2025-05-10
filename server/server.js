@@ -9,6 +9,7 @@ const UserModel = require("./models/users");
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
+
 app.use(cors({origin: "http://localhost:3000", credentials:true}));
 app.use(express.json());
 
@@ -183,23 +184,193 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
   }
 })
 
+app.post("/communities/:communityID/join", async function (req, res) {
+  try {
+    const { communityID } = req.params;
+    const { userID } = req.body;
+
+    await CommunitiesModel.findByIdAndUpdate(
+      communityID,
+      { $addToSet: { members: userID } } //prevents duplicates
+    );
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Error joining community:", err);
+    res.status(500).send("Failed to join community");
+  }
+});
+
+app.post("/communities/:communityID/leave", async function (req, res) {
+  try {
+    const { communityID } = req.params;
+    const { userID } = req.body;
+
+    await CommunitiesModel.findByIdAndUpdate(
+      communityID,
+      { $pull: { members: userID } }
+    );
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Error leaving community:", err);
+    res.status(500).send("Failed to leave community");
+  }
+});
+
+app.get("/search", async function (req, res) {
+  try {
+    //get and validate search query string
+    const query = req.query.q;
+    if (!query || query.trim() === "") {
+      return res.status(400).send("Missing search query");
+    }
+
+    //remove common stop words
+    const stopWords = ["is", "the", "a", "an", "of", "to", "and", "in", "on", "for", "at", "by", "with", "about", "as", "not", "this"];
+    const searchTerms = query
+      .toLowerCase()
+      .split(" ")
+      .filter(word => !stopWords.includes(word));
+
+    //convert terms to case-insensitive regexes
+    const regexes = searchTerms.map(term => new RegExp(term, "i"));
+
+    //load all posts (with flair + community metadata)
+    const allPosts = await PostsModel.find({})
+      .populate("linkFlairID")
+      .populate("communityId");
+
+    const matches = [];
+
+    //recursive helper function to fetch ALL nested comments
+    async function getAllNestedComments(commentIDs) {
+      const all = [];
+      for (const id of commentIDs) {
+        const comment = await CommentsModel.findById(id);
+        if (comment) {
+          all.push(comment); //include current comment
+          if (comment.commentIDs && comment.commentIDs.length > 0) {
+            //recursively get children
+            const nested = await getAllNestedComments(comment.commentIDs);
+            all.push(...nested);
+          }
+        }
+      }
+      return all;
+    }
+
+    //for each post, search in title, content, and all nested comments
+    for (const post of allPosts) {
+      const titleMatch = regexes.some(regex => regex.test(post.title));
+      const contentMatch = regexes.some(regex => regex.test(post.content));
+
+      //get all comments (recursively)
+      const allComments = await getAllNestedComments(post.commentIDs || []);
+
+      //search inside each comment’s content
+      const commentMatch = allComments.some(comment =>
+        regexes.some(regex => regex.test(comment.content))
+      );
+
+      //if match in title or content or any comment — include this post
+      if (titleMatch || contentMatch || commentMatch) {
+        matches.push(post);
+      }
+    }
+
+    //send matching posts back to frontend
+    res.json(matches);
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).send("Server error during search.");
+  }
+});
+
+app.post("/vote/:type/:id", async (req, res) => {
+  console.log("VOTE");
+  const { type, id } = req.params;
+  const { voteType, voterID } = req.body;
+
+  //vote type
+  if (!["upvote", "downvote"].includes(voteType)) {
+    return res.status(400).send("Invalid vote type.");
+  }
+
+  try {
+    //voter has sufficient reputation
+    const user = await UserModel.findById(voterID);
+    if (!user || user.reputation < 50) {
+      return res.status(403).send("Insufficient reputation to vote.");
+    }
+
+    //convert voter ID to ObjectId for consistency
+    const voterObjectId = new mongoose.Types.ObjectId(voterID);
+
+    //voting on a post or comment
+    const model = type === "post" ? PostsModel : CommentsModel;
+
+    //fetch post/comment to vote on
+    const target = await model.findById(id);
+    if (!target) return res.status(404).send(`${type} not found.`);
+
+    //prevent duplicate votes 
+    const hasUpvoted = target.upvoters?.some(id => id.equals(voterObjectId));
+    const hasDownvoted = target.downvoters?.some(id => id.equals(voterObjectId));
+    if (hasUpvoted || hasDownvoted) {
+      return res.status(400).send("You have already voted.");
+    }
+
+    //add voter to the appropriate list
+    if (voteType === "upvote") {
+      target.upvoters.push(voterObjectId);
+    } else {
+      target.downvoters.push(voterObjectId);
+    }
+
+    //recalculate total vote count (upvotes - downvotes)
+    target.voteCount = (target.upvoters.length || 0) - (target.downvoters.length || 0);
+    await target.save();
+
+    //update the author's reputation 
+    const authorId = target.postedBy || target.commentedBy;
+    const author = await UserModel.findById(authorId);
+    if (author) {
+      const repChange = voteType === "upvote" ? 5 : -10;
+      author.reputation += repChange;
+      await author.save();
+    }
+
+    //return the updated vote count to the client
+    res.status(200).json({ updatedVoteCount: target.voteCount });
+  } catch (err) {
+    console.error("Voting error:", err);
+    res.status(500).send("Voting failed.");
+  }
+});
+
+
 app.get("/communities/:communityID", async function (req, res) {
   const { communityID } = req.params;
 
-  // Prevent CastError by validating ObjectId
+  //prevent CastError by validating ObjectId
   if (!mongoose.Types.ObjectId.isValid(communityID)) {
     return res.status(400).send("Invalid community ID.");
   }
 
   console.log("GET /communities/" + communityID);
   try {
-    const communityDoc = await CommunitiesModel.findById(communityID);
+    const communityDoc = await CommunitiesModel.findById(communityID).populate("createdBy", "displayName");
     if (!communityDoc) {
       return res.status(404).send("Community not found");
     }
 
     const community = communityDoc.toObject();
     community.memberCount = community.members.length;
+
+    //add creator name from user object
+    community.creatorName = communityDoc.createdBy.displayName;
+
 
     res.json(community);
   } catch (err) {
@@ -386,6 +557,7 @@ app.get("/user-communities", async function (req, res) {
     res.status(400).send("No valid session found.")
   }
 })
+
 
 const server = app.listen(8000, () => {console.log("Server listening on port 8000...");});
 

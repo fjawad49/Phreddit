@@ -19,7 +19,19 @@ const commentSchema = new Schema({
   commentIDs: [{
     type: Schema.Types.ObjectId,
     ref: "Comment"
-  }]
+  }],
+  upvoters: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  downvoters: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  voteCount: {
+    type: Number,
+    default: 0
+  }
 });
 
 commentSchema.virtual('url').get(function () {

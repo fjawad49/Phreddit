@@ -11,8 +11,9 @@ import { getEarliestDate } from "./CommentThread.js";
 export default function CommunityPage() {
     /* Retrieve community name from pathname */
     const { communityID } = useParams();
-
     const [community, setCommunity] = useState(null);
+    const user = JSON.parse(localStorage.getItem("user"));
+    const [error, setError] = useState(null);
 
     /* Keep track of filtered posts to display (i.e. posts from community) */
     const [posts, setPosts] = useState([]);
@@ -26,6 +27,8 @@ export default function CommunityPage() {
                 const communityRes = await axios.get(`http://localhost:8000/communities/${communityID}`);
                 const communityData = communityRes.data;
                 setCommunity(communityData);
+
+               
 
                 //fetch posts for the community
                 const postResponses = await Promise.all(
@@ -62,11 +65,43 @@ export default function CommunityPage() {
                 console.log("Formatted Posts:", formattedPosts);
             } catch (error) {
                 console.error("Failed to fetch community or post data:", error);
+                setError("Failed to load community. Please try again later.");
             }
         }
 
         fetchCommunityData();
     }, [communityID]);
+
+    async function handleJoinCommunity() {
+        try {
+          await axios.post(`http://localhost:8000/communities/${communityID}/join`, {
+            userID: user._id
+          });
+          setCommunity(prev => ({
+            ...prev,
+            members: [...prev.members, user._id],
+            memberCount: prev.memberCount + 1
+          }));
+        } catch (err) {
+          console.error("Error joining community:", err);
+        }
+      }
+      
+      async function handleLeaveCommunity() {
+        try {
+          await axios.post(`http://localhost:8000/communities/${communityID}/leave`, {
+            userID: user._id
+          });
+          setCommunity(prev => ({
+            ...prev,
+            members: prev.members.filter(id => id !== user._id),
+            memberCount: prev.memberCount - 1
+          }));
+        } catch (err) {
+          console.error("Error leaving community:", err);
+        }
+      }
+      
 
     useEffect(() => {
         if (!community) return;
@@ -104,7 +139,18 @@ export default function CommunityPage() {
         return 0;
     });
 
+    if (error) {
+      return (
+        <div className="error-screen">
+          <h2>Error</h2>
+          <p>{error}</p>
+          <button onClick={() => window.location.href = "/"}>Return to Welcome Page</button>
+        </div>
+      );
+    }
+    
     if (!community) return <div>Loading...</div>;
+
     return (
         /* Reuse homepage structure */
         <div className="homepage-container">
@@ -126,7 +172,14 @@ export default function CommunityPage() {
                     )
                 )}
             </p>
-            <div className="community-meta">Created: {TimeStamp(community.startDate)}</div>
+            <div className="community-meta">Created by {community.creatorName} • {TimeStamp(community.startDate)}</div>
+            {user && (
+                community.members.includes(user._id) ? (
+                    <button onClick={handleLeaveCommunity}>Leave Community</button>
+                ) : (
+                    <button onClick={handleJoinCommunity}>Join Community</button>
+                )
+                )}
         </div>
 
         <p className="post-count">{sortedPosts.length} posts  • {community.memberCount} members</p>
