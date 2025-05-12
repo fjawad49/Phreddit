@@ -85,14 +85,12 @@ app.get("/:communityID/post/:postID", async function (req, res) {
   const { communityID, postID } = req.params;
 
   try {
-    console.log("Looking for community:", communityID);
     const community = await CommunitiesModel.findById(communityID);
     if (!community) {
       console.error("Community not found");
       return res.status(404).send("Community not found");
     }
 
-    console.log("Looking for post:", postID);
     var post = await PostsModel.findById(postID);
     if (!post) {
       console.error("Post not found");
@@ -117,7 +115,6 @@ app.get("/:communityID/post/:postID", async function (req, res) {
     }
 
     post = post.toObject()
-    console.log(post)
 
     post.postedBy = post.postedBy.displayName
     res.json({ post: post, commName: community.name});
@@ -295,62 +292,93 @@ app.get("/search", async function (req, res) {
   }
 });
 
-app.post("/vote/:type/:id", async (req, res) => {
+app.post("/vote/post/:postID", async (req, res) => {
   console.log("VOTE");
-  const { type, id } = req.params;
-  const { voteType, voterID } = req.body;
-
+  const { postID } = req.params;
+  const { voteType } = req.body;
   //vote type
-  if (!["upvote", "downvote"].includes(voteType)) {
+  if (!["upvote", "downvote", "no-vote"].includes(voteType)) {
     return res.status(400).send("Invalid vote type.");
   }
 
   try {
     //voter has sufficient reputation
-    const user = await UserModel.findById(voterID);
+    const user = await UserModel.findOne({ displayName: req.session.user });
+    console.log(user)
     if (!user || user.reputation < 50) {
       return res.status(403).send("Insufficient reputation to vote.");
     }
-
-    //convert voter ID to ObjectId for consistency
-    const voterObjectId = new mongoose.Types.ObjectId(voterID);
-
-    //voting on a post or comment
-    const model = type === "post" ? PostsModel : CommentsModel;
-
-    //fetch post/comment to vote on
-    const target = await model.findById(id);
-    if (!target) return res.status(404).send(`${type} not found.`);
-
+    //fetch post to vote on
+    const target = await PostsModel.findById(postID);
+    if (!target) return res.status(404).send(`Post not found.`);
     //prevent duplicate votes 
-    const hasUpvoted = target.upvoters?.some(id => id.equals(voterObjectId));
-    const hasDownvoted = target.downvoters?.some(id => id.equals(voterObjectId));
-    if (hasUpvoted || hasDownvoted) {
+    const hasUpvoted = target.upvoters?.some(id => id.equals(user._id));
+    const hasDownvoted = target.downvoters?.some(id => id.equals(user._id));
+        console.log(`voteType: ${voteType}`)
+    if (voteType !== "no-vote" && (hasUpvoted || hasDownvoted)) {
       return res.status(400).send("You have already voted.");
     }
 
+    if (voteType === "no-vote" && !hasUpvoted && !hasDownvoted) {
+      return res.status(400).send("You have no vote.");
+    }
+    var userVote;
+    var noneVote = false
     //add voter to the appropriate list
     if (voteType === "upvote") {
-      target.upvoters.push(voterObjectId);
+      console.log("add upvote")
+      userVote = "upvote"
+      target.upvoters.push(user._id);
+      //recalculate total vote count (upvotes - downvotes)
+      target.voteCount = (target.upvoters.length) - (target.downvoters.length);
+      await target.save();
+    } else if (voteType === "downvote") {
+      console.log("add downvote")
+      userVote = "downvote"
+      target.downvoters.push(user._id);
+      //recalculate total vote count (upvotes - downvotes)
+      target.voteCount = (target.upvoters.length) - (target.downvoters.length);
+      await target.save();
+    } else if (hasUpvoted) {
+      userVote = "no-vote"
+      console.log("remove upvote")
+      noneVote = true
+      target.voteCount = (target.upvoters.length) - (target.downvoters.length) - 1
+      await PostsModel.findByIdAndUpdate(
+        postID,
+        {  
+          $set : {voteCount : (target.upvoters.length) - (target.downvoters.length) - 1},
+          $pull: {upvoters: user._id} 
+        }
+      )
     } else {
-      target.downvoters.push(voterObjectId);
+      userVote = "no-vote"
+      console.log("remove downvote")
+      noneVote = true
+      target.voteCount = (target.upvoters.length) - (target.downvoters.length) + 1
+      await PostsModel.findByIdAndUpdate(
+        postID,
+        {  
+          $set : {voteCount : (target.upvoters.length) - (target.downvoters.length) + 1},
+          $pull: {downvoters: user._id} 
+        }
+      )
     }
 
-    //recalculate total vote count (upvotes - downvotes)
-    target.voteCount = (target.upvoters.length || 0) - (target.downvoters.length || 0);
-    await target.save();
-
     //update the author's reputation 
-    const authorId = target.postedBy || target.commentedBy;
-    const author = await UserModel.findById(authorId);
-    if (author) {
+    const author = await UserModel.findById(target.postedBy);
+    if (!noneVote && author) {
       const repChange = voteType === "upvote" ? 5 : -10;
+      author.reputation += repChange;
+      await author.save();
+    } else {
+      const repChange = hasUpvoted ? -5 : 10;
       author.reputation += repChange;
       await author.save();
     }
 
     //return the updated vote count to the client
-    res.status(200).json({ updatedVoteCount: target.voteCount });
+    res.status(200).json({ userVote: userVote, voteCount: target.voteCount });
   } catch (err) {
     console.error("Voting error:", err);
     res.status(500).send("Voting failed.");

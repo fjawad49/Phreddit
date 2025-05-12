@@ -116,7 +116,7 @@ div .post-content {
     transition: color 0.2s;
   }
   
-  .vote-button:hover {
+  .vote-button:hover, .clicked {
     color: #ff4500;
   }
   

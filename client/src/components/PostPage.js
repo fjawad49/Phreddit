@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import CommentThread, { getEarliestDate } from "./CommentThread.js";
 import axios from "axios";
 import TimeStamp from "./TimeStamp.js";
+import { ErrorPage } from "./WelcomePage.js";
 
 export default function PostPage() {
     const { postID, communityID } = useParams();
@@ -15,8 +16,10 @@ export default function PostPage() {
     const [linkedDescription, setLinkedDescription] = useState([]);
     const [commCount, setCommCount] = useState(0);
     const [sortedThreads, setSortedThreads] = useState([]);
-    const user = JSON.parse(localStorage.getItem("user")); //null if guest
+    const [votes, setVotes] = useState(0);
+    const user = JSON.parse(localStorage.getItem("user"));
     const [error, setError] = useState(null);
+    const [userVote, setUserVote] = useState(null)
 
     const isGuest = !user;
 
@@ -33,6 +36,7 @@ export default function PostPage() {
             linkFlair: post.linkFlairID?.content,
             community: communityName
           });
+          setVotes(post.voteCount)
         })
         .catch((err) => {
           console.log("Error fetching post data:", err);
@@ -44,7 +48,6 @@ export default function PostPage() {
     
     useEffect(() => {
         if (!postInfo?.content) return;
-        console.log(postInfo)
         let commentCount = 0;
 
         function incrementCommCount(){
@@ -52,10 +55,8 @@ export default function PostPage() {
         }
         
         const commentEarliestTimes = postInfo.commentIDs.map((comment) => getEarliestDate(comment,incrementCommCount));
-        console.log(commentEarliestTimes)
         const indices = commentEarliestTimes.map((_, index) => index);
         indices.sort((a, b) => (commentEarliestTimes[b] - commentEarliestTimes[a]));
-        console.log("yolo");
         const commentThreads = postInfo.commentIDs.map(comment => (<CommentThread key={comment._id} cID={communityID} pID={postID} comment={comment}  hideReply={isGuest} showVoteCount={true} hideVoting={isGuest || (user?.reputation < 50)}/>));
         setSortedThreads(indices.map(index => commentThreads[index]));
         setCommCount(commentCount);
@@ -79,6 +80,16 @@ export default function PostPage() {
 
         description.push(postInfo.content.substring(startIndex));
         setLinkedDescription(description);
+        if (user && userVote == null){
+          if (postInfo.upvoters.includes(user._id)){
+            setUserVote("upvote")
+          } else if (postInfo.downvoters.includes(user._id)){
+            setUserVote("downvote")
+          } else{
+            setUserVote("no-vote")
+          }
+        }
+
     }, [postInfo]);
 
     const handleAddComment = () => {
@@ -87,13 +98,7 @@ export default function PostPage() {
     
     if (error) {
       return (
-        <div className="error-screen">
-          <h2>Error</h2>
-          <p>{error}</p>
-          <button onClick={() => (window.location.href = "/")}>
-            Return to Welcome Page
-          </button>
-        </div>
+        <ErrorPage error={error}/>
       );
     }  
 
@@ -103,15 +108,12 @@ export default function PostPage() {
 
     const handlePostVote = async (type) => {
       try {
-        const res = await axios.post(`http://localhost:8000/vote/post/${postID}`, {
-          voterID: user._id,
-          voteType: type,
-        });
-    
-        setPostInfo((prev) => ({
-          ...prev,
-          voteCount: res.data.updatedVoteCount,
-        }));
+        if (userVote === "no-vote" || userVote === "upvote" && type === "no-vote" || userVote === "downvote" && type === "no-vote"){
+          const res = await axios.post(`http://localhost:8000/vote/post/${postID}`, {voteType: type}, {withCredentials: true});
+          console.log(res.data)
+          setUserVote(res.data.userVote)
+          setVotes(res.data.voteCount)
+        }
       } catch (err) {
         console.error(err);
         setError(err.response?.data?.message || "Voting failed. Try again later.");
@@ -136,13 +138,13 @@ export default function PostPage() {
                 <span className="post-stats">
                   <strong>Views:</strong> {postInfo.views} |{" "}
                   <strong>Comments:</strong> {commCount} |{" "}
-                  <strong>Votes:</strong> {postInfo.voteCount ?? 0}
+                  <strong>Votes:</strong> {votes}
                 </span>
 
                 {!isGuest && user.reputation >= 50 && (
                   <span className="post-vote-inline">
-                    <button className="vote-button small" onClick={() => handlePostVote("upvote")}>▲</button>
-                    <button className="vote-button small" onClick={() => handlePostVote("downvote")}>▼</button>
+                    <button className={userVote === "upvote" ? "vote-button small clicked" : "vote-button small"} onClick={() => handlePostVote(userVote === "upvote" ? "no-vote" : "upvote")}>▲</button>
+                    <button className={userVote === "downvote" ? "vote-button small clicked" : "vote-button small"} onClick={() => handlePostVote(userVote === "downvote" ? "no-vote" : "downvote")}>▼</button>
                   </span>
                 )}
               </div>

@@ -10,7 +10,6 @@ export default function CommentThread ( {cID, pID, comment, level = 0, hideReply
   const [childComments, setChildComments] = useState([]);
   
   useEffect(() => {
-      console.log(comment)
       setChildComments(comment.commentIDs);
   }, [comment])
   return (
@@ -37,7 +36,6 @@ function Comment ( {cID, pID, comment, level, hideReply, showVoteCount, hideVoti
   useEffect(() => {
       let description = [], startIndex = 0;
       const hyperLinks = validateLinks(comment.content, false);
-      console.log(hyperLinks)
       const linkTexts = Object.keys(hyperLinks)
 
 
