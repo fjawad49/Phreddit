@@ -50,6 +50,7 @@ function App() {
               <Route path="/:communityID/posts/:postID/comment/new" element={<CommentCreatePage  />} />
               <Route path="/:communityID/posts/:postID/comment/:commentID/reply" element={<CommentCreatePage/>} />
               <Route path="/:communityID" element={<CommunityPage />} />
+              <Route path="/admin/user/:id" element={<UserProfilePage />} />
               </Routes>
             </section>
           </>

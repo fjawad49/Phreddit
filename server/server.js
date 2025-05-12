@@ -720,8 +720,8 @@ app.get("/user/profile", async function (req, res) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    const { displayName, email, dateJoined, reputation } = user;
-    res.status(200).json({ displayName, email, dateJoined, reputation });
+    const { _id, displayName, email, dateJoined, reputation, role } = user;
+    res.status(200).json({ _id, displayName, email, dateJoined, reputation, role });
   } catch (err) {
     console.error("Error fetching user profile:", err);
     res.status(500).send("Failed to fetch user profile");
@@ -917,6 +917,49 @@ app.delete("/delete-comment/:id", async (req, res) => {
   if (!req.session.user) return res.status(401).send("Not authorized");
   await deleteCommentAndReplies(req.params.id);
   res.sendStatus(200);
+});
+
+//get all users
+app.get("/admin/users", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in." });
+  }
+
+  const currentUser = await UserModel.findOne({ displayName: req.session.user });
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.status(403).json({ error: "Admin access only." });
+  }
+
+  try {
+    const users = await UserModel.find({}, "displayName email reputation");
+    res.json(users);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ error: "Failed to load users." });
+  }
+});
+
+//specific users profile
+app.get("/admin/users/:id/profile", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in." });
+  }
+
+  const currentUser = await UserModel.findOne({ displayName: req.session.user });
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.status(403).json({ error: "Admin access only." });
+  }
+
+  try {
+    const user = await UserModel.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    const { _id, displayName, email, dateJoined, reputation, role } = user;
+    res.json({ _id, displayName, email, dateJoined, reputation, role });
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    res.status(500).json({ error: "Failed to fetch user profile." });
+  }
 });
 
 

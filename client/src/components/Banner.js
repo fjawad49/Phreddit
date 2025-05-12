@@ -62,16 +62,20 @@ const Banner = () => {
       />
       {/* Profile Button */}
       <button
-        className="create-post"
-        onClick={() => navigate("/profile")}
+        className={`create-post ${!user ? "disabled" : ""}`}
+        onClick={() => {
+          if (user) navigate("/profile");
+        }}
+        disabled={!user}
         style={{
           marginLeft: "10px",
           fontWeight: "bold",
+          cursor: !user ? "not-allowed" : "pointer",
+          opacity: !user ? 0.6 : 1,
         }}
       >
         {user ? user.displayName : "Guest"}
       </button>
-
 
       {/* Create Post Button */}
       <button
