@@ -13,11 +13,19 @@ export default function PostCreatePage() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [comRes, flairRes] = await Promise.all([
+                const [comRes, flairRes, joinedRes] = await Promise.all([
                     axios.get("http://localhost:8000/communities"),
-                    axios.get("http://localhost:8000/linkflairs")
+                    axios.get("http://localhost:8000/linkflairs"),
+                    axios.get("http://localhost:8000/user-communities", { withCredentials: true })
                 ]);
-                setCommunities(comRes.data);
+                //sort joined communities first
+                const joinedIds = new Set(joinedRes.data.map(c => c._id));
+                const sortedCommunities = [
+                    ...comRes.data.filter(c => joinedIds.has(c._id)),
+                    ...comRes.data.filter(c => !joinedIds.has(c._id))
+                ];
+
+                setCommunities(sortedCommunities);
                 setLinkFlairs(flairRes.data);
             } catch (err) {
                 console.error("Failed to fetch form data:", err);
@@ -37,7 +45,7 @@ export default function PostCreatePage() {
             return;
         }
         
-        const postUser = data.get("Username")
+        //const postUser = data.get("Username")
         const communityID = data.get("Community");
 
         let flair = data.get("Link Flair")
@@ -60,17 +68,20 @@ export default function PostCreatePage() {
                 title: data.get("Title"),
                 content: data.get("Content"),
                 linkFlairID: flair,
-                postedBy: postUser,
-                postedDate: new Date(),
-                commentIDs: [],
-                views: 0,
+                //postedBy: postUser,
+                //postedDate: new Date(),
+                //commentIDs: [],
+                //views: 0,
             };
             try {
-                await axios.post(`http://localhost:8000/communities/${communityID}/new-post`, newPost);
-                navigate(`/`);
+                await axios.post(`http://localhost:8000/communities/${communityID}/new-post`, newPost, {
+                    withCredentials: true
+                });
+                navigate("/");
             } catch (err) {
                 console.error("Post creation failed:", err);
-                setError("Failed to submit post");
+                const msg = err.response?.data?.error || "Failed to submit post";
+                setError(msg);
             }
         }
 
@@ -88,16 +99,29 @@ export default function PostCreatePage() {
         placeholder: "Flair...(Max 30 Characters)"
     };
 
-
-    return(
+    return (
         <form className="create-page" id="create-community-form" onSubmit={handleForm}>
-            <DropDown name="Community" values={values}/>
-            <TextBox name="Title" maxchars="100" placeholder="Title...(Max 100 Characters)"/>
-            <DropDown name="Link Flair" placeholder="Custom/None" values={flairs} required={false} customInput={true} customAttributes={customFlair}/>
-            <TextBox name="Content" multiline={true}/>
-            <span style={{color: "red", display: "block"}}>{error ? (`${error}`) : ('')}</ span>
-            <TextBox name="Username" placeholder="Username..."/>
+            <div className="form-group">
+                <DropDown name="Community" values={values} />
+            </div>
+            <div className="form-group">
+                <TextBox name="Title" maxchars="100" placeholder="Title...(Max 100 Characters)" />
+            </div>
+            <div className="form-group">
+                <DropDown
+                    name="Link Flair"
+                    placeholder="Custom/None"
+                    values={flairs}
+                    required={false}
+                    customInput={true}
+                    customAttributes={customFlair}
+                />
+            </div>
+            <div className="form-group">
+                <TextBox name="Content" multiline={true} />
+            </div>
+            <span style={{ color: "red", display: "block" }}>{error && error}</span>
             <input className="submit-button" type="submit" value="Submit Post" />
-        </ form>
+        </form>
     );
-}
+}    

@@ -1,0 +1,81 @@
+.profile-page {
+    padding: 2rem;
+    font-family: 'Times New Roman', Times, serif;
+    max-width: 800px;
+  }
+  
+  .profile-page h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #ccc;
+    padding-bottom: 0.5rem;
+  }
+  
+  .user-info p {
+    margin: 0.3rem 0;
+    font-size: 1rem;
+  }
+  
+  .user-info p strong {
+    color: #444;
+    margin-right: 0.5rem;
+  }
+  
+  .tab-buttons {
+    margin-top: 1rem;
+  }
+  
+  .tab-buttons button {
+    margin-right: 10px;
+    padding: 6px 12px;
+    background-color: #eee;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .tab-buttons button:hover {
+    background-color: #FF4500; /* reddish-orange */
+    color: white;
+    border-color: #FF4500;
+  }  
+  
+  .listing-section {
+    margin-top: 1.5rem;
+    padding-left: 0;
+  }
+  
+  .listing-section ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .listing-section li {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    background-color: #fafafa;
+  }
+  
+  .listing-section li span {
+    font-size: 1rem;
+    color: #333;
+  }
+  
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* adds space between the link and button */
+  }
+  
+  .delete-btn {
+    margin-left: 0;
+  }
+  
+  .tab-buttons .active-tab {
+    background-color: #FF4500;
+    color: white;
+    border-color: #FF4500;
+  }
+  

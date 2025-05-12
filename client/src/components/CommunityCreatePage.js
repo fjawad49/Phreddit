@@ -20,13 +20,15 @@ export default function CommunityCreatePage() {
             const newComm = {
                 name: data.get("Community Name"),
                 description: data.get("Community Description"),
-                postIDs: [],
-                startDate: new Date(),
-                members: [data.get("Username")],
-                memberCount: 1,
+                //postIDs: [],
+                //startDate: new Date(),
+                //members: [data.get("Username")],
+                //memberCount: 1,
             }
             try {
-                const res = await axios.post(`http://localhost:8000/new-community/`, newComm);
+                const res = await axios.post(`http://localhost:8000/new-community/`, newComm, {
+                    withCredentials: true
+                });
                 const community = res.data;
                 console.log(community);
                 await navigate(`/${encodeURIComponent(community._id)}`);
@@ -42,7 +44,6 @@ export default function CommunityCreatePage() {
             <TextBox name="Community Name" maxchars="100" placeholder="Name...(Max 100 Characters)"/>
             <TextBox multiline={true} maxchars="500" name="Community Description" placeholder="Description...(Max 500 Characters)"/>
             <span style={{color: "red", display: "block"}}>{error ? (`${error}`) : ('')}</ span>
-            <TextBox name="Username" placeholder="Username..."/>
             <input className="submit-button" type="submit" value="Engender Community" />
         </ form>
     );

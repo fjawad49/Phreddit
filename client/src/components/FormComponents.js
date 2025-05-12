@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import "../stylesheets/forms.css"; 
 
 
-export function TextBox ({placeholder = "Enter Text...", multiline = false, maxchars = null, required = true, name}){
+export function TextBox ({placeholder = "Enter Text...", multiline = false, maxchars = null, required = true, name, value, onChange}){
     const [text, setText] = useState("");
 
-    const onTyping = (e) => {
-      setText(e.target.value);
+    const handleChange = (e) => {
+      if (onChange) onChange(e);
+      else setText(e.target.value);
     };
+
+    const controlledValue = value !== undefined ? value : text;
+
+    useEffect(() => {
+      if (value !== undefined) {
+        setText(value);
+      }
+    }, [value]);
+    
   
    return (
     <>
@@ -23,8 +33,8 @@ export function TextBox ({placeholder = "Enter Text...", multiline = false, maxc
             maxLength={maxchars} 
             className="entryfield" 
             required={required} 
-            value={text}
-            onChange={onTyping}
+            value={controlledValue}
+            onChange={handleChange}
           />
         ) : (
           <input 
@@ -35,8 +45,8 @@ export function TextBox ({placeholder = "Enter Text...", multiline = false, maxc
             maxLength={maxchars} 
             className="entryfield" 
             required={required} 
-            value={text}
-            onChange={onTyping}
+            value={controlledValue}
+            onChange={handleChange}
           />
         )}
         <br />
@@ -44,18 +54,21 @@ export function TextBox ({placeholder = "Enter Text...", multiline = false, maxc
    );
 }
 
-export function DropDown( {placeholder = "", required = true, name, values, customInput=false, customAttributes} ) {
+export function DropDown( {placeholder = "", required = true, name, values, customInput=false, customAttributes, selected, onChange, customValue, onCustomChange, disabled = false} ) {
   const keys = Object.keys(values)
   const options = keys.map(key => (<option key={values[key]} value={values[key]}>{key}</option>));
   const [custom, setCustom] = useState(customInput);
-  function setValue(e){
+  const handleChange = (e) => {
     const selectedOption = e.target.value;
-    if ((selectedOption === "" || selectedOption === "none") && customInput){
+
+    if (onChange) onChange(selectedOption);
+
+    if ((selectedOption === "" || selectedOption === "none") && customInput) {
       setCustom(true);
-    }else{
+    } else {
       setCustom(false);
     }
-  }
+  };
 
   return(
     <>
@@ -64,22 +77,26 @@ export function DropDown( {placeholder = "", required = true, name, values, cust
       id={name} 
       name={name} 
       required={required}
-      onChange={customInput ? setValue : null}>
+      onChange={handleChange}
+      value={selected}
+      disabled={disabled}>
         <option className="default-drop-down" key={required ? "" : "none"} value={required ? "" : "none"}>{placeholder}</option>
         {options}
       </select>
-      {custom ? (
+      {customInput && custom ? (
         <>
-        <br />
-        <TextBox 
-          placeholder={"placeholder" in customAttributes ? customAttributes.placeholder : "Enter Text..."} 
-          multiline={"multiline" in customAttributes ? customAttributes.multiline : false} 
-          maxchars={"maxchars" in customAttributes ? customAttributes.maxchars : null} 
-          required={"required" in customAttributes ? customAttributes.required : true}
-          name={customAttributes.name}
-        /></>) : 
-        (<br />)
-      }
+          <br />
+          <TextBox 
+            placeholder={customAttributes?.placeholder || "Enter Text..."}
+            multiline={customAttributes?.multiline || false}
+            maxchars={customAttributes?.maxchars || null}
+            required={customAttributes?.required ?? false} 
+            name={customAttributes?.name}
+            value={customValue}
+            onChange={onCustomChange}
+          />
+        </>
+      ) : null}
     </>
   );
 }

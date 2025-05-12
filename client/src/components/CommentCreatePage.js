@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TextBox, validateLinks } from "./FormComponents.js";
 import axios from "axios";
+axios.defaults.withCredentials = true;
 
 export default function CommentCreatePage() {
     let params = useParams();
@@ -16,7 +17,13 @@ export default function CommentCreatePage() {
         e.preventDefault();
         const data = new FormData(e.target);
         const content = data.get("Comment Content");
-        const username = data.get("Username");
+        //const username = data.get("Username");
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user || !user._id) {
+            setContentError("You must be logged in to comment.");
+            return;
+        }
+
 
         const linkValidation = validateLinks(content, false);
 
@@ -25,27 +32,29 @@ export default function CommentCreatePage() {
         } else {
             const newComment = {
                 content: content,
+                postID: params.postID,
                 commentIDs: [],
-                commentedBy: username,
-                commentedDate: new Date(),
+                //commentedBy: user._id
+                //commentedDate: new Date(),
             };
-            if (params.commentID) {
-                try {
-                    await axios.post(`http://localhost:8000/comment/${params.commentID}/reply`, newComment);
-                } catch (err) {
-                    console.error("Comment reply creation failed:", err);
-                    setContentError("Failed to create reply");
+            try {
+                if (params.commentID) {
+                    //reply to a comment
+                    await axios.post(`http://localhost:8000/comment/${params.commentID}/reply`, newComment, {
+                        withCredentials: true
+                    });
+                } else {
+                    //top-level comment to a post
+                    await axios.post(`http://localhost:8000/post/${params.postID}/new-comment`, newComment, {
+                        withCredentials: true
+                    });
                 }
-            } else {
-                try {
-                    console.log(params.postID)
-                    await axios.post(`http://localhost:8000/post/${params.postID}/new-comment`, newComment);
-                } catch (err) {
-                    console.error("New comment creation failed:", err);
-                    setContentError("Failed to create comment");
-                }
-            }
-            navigate(`/${params.communityID}/posts/${params.postID}`);
+    
+                navigate(`/${params.communityID}/posts/${params.postID}`);
+            } catch (err) {
+                console.error("Comment creation failed:", err);
+                setContentError("Failed to create comment or reply");
+            }    
         }
     }
 
@@ -58,12 +67,6 @@ export default function CommentCreatePage() {
                 placeholder="Enter Comment Here... (Max 500 Characters)"
             />
             <span style={{color: "red", display: "block"}}>{contentError ? (`${contentError}`) : ('')}</ span>
-
-            <TextBox
-                name="Username"
-                placeholder="Username..."
-            />
-
             <input
                 className="submit-button"
                 type="submit"

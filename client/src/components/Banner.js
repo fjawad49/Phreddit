@@ -63,17 +63,15 @@ const Banner = () => {
       {/* Profile Button */}
       <button
         className="create-post"
-        disabled
+        onClick={() => navigate("/profile")}
         style={{
           marginLeft: "10px",
-          backgroundColor: "#eee",
-          color: "#333",
           fontWeight: "bold",
-          cursor: "default"
         }}
       >
         {user ? user.displayName : "Guest"}
       </button>
+
 
       {/* Create Post Button */}
       <button

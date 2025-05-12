@@ -67,7 +67,7 @@ async function init() {
   const regularUsers = await User.insertMany([
     {
       email: 'user1@gmail.com',
-      displayName: 'jules234',
+      displayName: 'fantasy',
       passwordHash: await bcrypt.hash('imthe104', 10),
       reputation: 100
     },
@@ -79,7 +79,7 @@ async function init() {
     },
     {
       email: 'user3@yahoo.com',
-      displayName: 'XxhelloxX',
+      displayName: 'random',
       passwordHash: await bcrypt.hash('baller10', 10),
       reputation: 100
     }
@@ -99,19 +99,19 @@ async function init() {
   //create nested comment structure: A → B → C
   const commentC = await Comment.create({
     content: 'Nested reply',
-    commentedBy: userMap['XxhelloxX'].displayName, //third-level comment
+    commentedBy: userMap['random']._id , //third-level comment
     commentIDs: []
   });
 
   const commentB = await Comment.create({
     content: 'Reply to A',
-    commentedBy: userMap['jules234'].displayName, //second-level comment
+    commentedBy: userMap['fantasy']._id, //second-level comment
     commentIDs: [commentC._id] //references commentC as its child
   });
 
   const commentA = await Comment.create({
     content: 'Top-level comment',
-    commentedBy: userMap['wonderz'].displayName, //top-level comment
+    commentedBy: userMap['wonderz']._id, //top-level comment
     commentIDs: [commentB._id] //references commentB as its child
   });
 
@@ -120,7 +120,7 @@ async function init() {
         name: 'Community1',
         description: 'Its spring!',
         postIDs: [],
-        creatorID: adminUser._id,
+        createdBy: adminUser._id,
         members: [adminUser._id, ...regularUsers.map(u => u._id)]
       });
     
@@ -135,8 +135,8 @@ async function init() {
     communityId: community._id, //set after community creation
     views: 42,
     voteCount: 2,
-    upvoters: [userMap['jules234']._id],
-    downvoters: [userMap['XxhelloxX']._id],
+    upvoters: [userMap['fantasy']._id],
+    downvoters: [userMap['random']._id],
     linkFlairID: flairs[0]._id,
     commentIDs: [commentA._id] //top-level comment thread
   });

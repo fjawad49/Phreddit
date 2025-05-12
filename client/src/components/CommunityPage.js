@@ -33,35 +33,48 @@ export default function CommunityPage() {
                
 
                 //fetch posts for the community
-                const postResponses = await Promise.all(
-                    communityData.postIDs.map(postID => axios.get(`http://localhost:8000/posts/${postID}`))
-                );
-                const fetchedPosts = postResponses.map(res => res.data);
+                const fetchedPosts = await Promise.all(
+                    communityData.postIDs.map(async postID => {
+                      try {
+                        const res = await axios.get(`http://localhost:8000/posts/${postID}`);
+                        return res.data;
+                      } catch (err) {
+                        console.warn(`Skipping missing post ${postID}:`, err.message);
+                        return null;
+                      }
+                    })
+                  );
+                  const validPosts = fetchedPosts.filter(Boolean);
+
+                  
+
+                  
 
                 
                 const flairRes = await axios.get("http://localhost:8000/linkflairs");
                 const flairs = flairRes.data;
 
-                const formattedPosts = await Promise.all(fetchedPosts.map(async (post) => {
+                const formattedPosts = await Promise.all(validPosts.map(async (post) => {
                     const flair = flairs.find(f => f._id === post.linkFlairID);
                     let commentCount = 0;
-                    function incrementCommCount(){
-                        commentCount += 1;
+                    function incrementCommCount() {
+                      commentCount += 1;
                     }
                     const commentEarliestDates = post.commentIDs?.map(comment => getEarliestDate(comment, incrementCommCount));
-                    const sortedComments = commentEarliestDates?.sort((a,b) => b-a);
+                    const sortedComments = commentEarliestDates?.sort((a, b) => b - a);
+                  
                     return {
-                        ...post,
-                        timestamp: new Date(post.postedDate),
-                        latestComment:(post.commentIDs.length > 0 ?
-                            new Date(sortedComments[0])
-                            : null),
-                        commentCount: commentCount,
-                        communityName: communityData.name,
-                        communityID: communityData._id,
-                        linkFlair: flair?.content,
+                      ...post,
+                      timestamp: new Date(post.postedDate),
+                      latestComment: (post.commentIDs?.length > 0
+                        ? new Date(sortedComments[0])
+                        : null),
+                      commentCount,
+                      communityName: communityData.name,
+                      communityID: communityData._id,
+                      linkFlair: flair?.content,
                     };
-                }));                
+                  }));                         
                 console.log(user)
                 console.log(communityData.members)
                 setPosts(formattedPosts);

@@ -9,7 +9,8 @@ const commentSchema = new Schema({
     maxlength: 500
   },
   commentedBy: {
-    type: String,
+    type: Schema.Types.ObjectId,
+    ref: "User",
     required: true
   },
   commentedDate: {
@@ -20,14 +21,14 @@ const commentSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "Comment"
   }],
-  upvoters: {
+  upvoters: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
-  },
-  downvoters: {
+  }],
+  downvoters: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
-  },
+  }],  
   voteCount: {
     type: Number,
     default: 0
