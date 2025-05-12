@@ -15,3 +15,13 @@ export default function WelcomePage(){
         </div>
     );
 }
+
+export function ErrorPage({error}){
+    return(
+        <div className="homepage-container">
+          <h2>Error</h2>
+          <p>{error}</p>
+          <button className="welcome-button colored" onClick={() => window.location.href = "/"}>Return to Welcome Page</button>
+        </div>
+    );
+}

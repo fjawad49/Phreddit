@@ -1,5 +1,6 @@
-import "../stylesheets/forms.css"; 
-import { useParams } from "react-router-dom";
+import "../stylesheets/forms.css";
+import "../stylesheets/welcome.css" 
+import { useNavigate, useParams } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import Postcard from './Postcard.js'
 //import Model from "../models/model.js";
@@ -7,12 +8,14 @@ import { validateLinks } from "./FormComponents.js";
 import axios from "axios";
 import TimeStamp from "./TimeStamp.js";
 import { getEarliestDate } from "./CommentThread.js";
+import { ErrorPage } from "./WelcomePage.js";
 
 export default function CommunityPage() {
     /* Retrieve community name from pathname */
+    const navigate = useNavigate();
     const { communityID } = useParams();
     const [community, setCommunity] = useState(null);
-    const user = JSON.parse(localStorage.getItem("user"));
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
     const [error, setError] = useState(null);
 
     /* Keep track of filtered posts to display (i.e. posts from community) */
@@ -27,7 +30,6 @@ export default function CommunityPage() {
                 const communityRes = await axios.get(`http://localhost:8000/communities/${communityID}`);
                 const communityData = communityRes.data;
                 setCommunity(communityData);
-
                
 
                 //fetch posts for the community
@@ -60,8 +62,10 @@ export default function CommunityPage() {
                         linkFlair: flair?.content,
                     };
                 }));                
-
+                console.log(user)
+                console.log(communityData.members)
                 setPosts(formattedPosts);
+                setError(null);
                 console.log("Formatted Posts:", formattedPosts);
             } catch (error) {
                 console.error("Failed to fetch community or post data:", error);
@@ -70,35 +74,29 @@ export default function CommunityPage() {
         }
 
         fetchCommunityData();
-    }, [communityID]);
+    }, [communityID, user]);
 
     async function handleJoinCommunity() {
         try {
-          await axios.post(`http://localhost:8000/communities/${communityID}/join`, {
-            userID: user._id
-          });
-          setCommunity(prev => ({
-            ...prev,
-            members: [...prev.members, user._id],
-            memberCount: prev.memberCount + 1
-          }));
+          await axios.post(`http://localhost:8000/communities/${communityID}/join`, {}, {withCredentials: true});
+          const res = await axios.get(`http://localhost:8000/user-data`,{withCredentials: true})
+          localStorage.setItem('user', JSON.stringify(res.data));
+          setUser(res.data)
         } catch (err) {
           console.error("Error joining community:", err);
+          setError("Error joining community.");
         }
       }
       
       async function handleLeaveCommunity() {
         try {
-          await axios.post(`http://localhost:8000/communities/${communityID}/leave`, {
-            userID: user._id
-          });
-          setCommunity(prev => ({
-            ...prev,
-            members: prev.members.filter(id => id !== user._id),
-            memberCount: prev.memberCount - 1
-          }));
+          await axios.post(`http://localhost:8000/communities/${communityID}/leave`, {}, {withCredentials: true});
+          const res = await axios.get(`http://localhost:8000/user-data`,{withCredentials: true})
+          localStorage.setItem('user', JSON.stringify(res.data));
+          setUser(res.data);
         } catch (err) {
           console.error("Error leaving community:", err);
+          setError("Error leaving community.");
         }
       }
       
@@ -140,13 +138,7 @@ export default function CommunityPage() {
     });
 
     if (error) {
-      return (
-        <div className="error-screen">
-          <h2>Error</h2>
-          <p>{error}</p>
-          <button onClick={() => window.location.href = "/"}>Return to Welcome Page</button>
-        </div>
-      );
+      return <ErrorPage error={error}/>
     }
     
     if (!community) return <div>Loading...</div>;

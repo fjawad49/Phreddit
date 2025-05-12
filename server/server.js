@@ -185,14 +185,18 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
 })
 
 app.post("/communities/:communityID/join", async function (req, res) {
+  console.log("POST /join")
   try {
     const { communityID } = req.params;
-    const { userID } = req.body;
-
+    const user = await UserModel.findOne({ displayName: req.session.user });
+    const userID = user._id;
     await CommunitiesModel.findByIdAndUpdate(
       communityID,
       { $addToSet: { members: userID } } //prevents duplicates
     );
+
+    user.communities.push(communityID);
+    await user.save()
 
     res.sendStatus(200);
   } catch (err) {
@@ -202,15 +206,19 @@ app.post("/communities/:communityID/join", async function (req, res) {
 });
 
 app.post("/communities/:communityID/leave", async function (req, res) {
+  console.log("POST /join")
   try {
     const { communityID } = req.params;
-    const { userID } = req.body;
-
+    const user = await UserModel.findOne({ displayName: req.session.user });
+    const userID = user._id;
     await CommunitiesModel.findByIdAndUpdate(
       communityID,
       { $pull: { members: userID } }
     );
-
+    await UserModel.findByIdAndUpdate(
+      userID,
+      { $pull: { communities: communityID } }
+    );
     res.sendStatus(200);
   } catch (err) {
     console.error("Error leaving community:", err);
@@ -528,6 +536,29 @@ app.post("/login", async function (req, res) {
   } catch (err) {
     console.error("Error during login:", err);
     res.status(500).json({ error: "Server error during login." });
+  }
+});
+
+app.get("/user-data", async function (req, res) {
+  console.log("POST /user-data");
+
+  if (!req.session.user){
+    res.status(400).json({ error: "No account associated with request." });
+  }
+
+  try {
+    const user = await UserModel.findOne({ displayName: req.session.user });
+
+    if (!user) {
+      return res.status(400).json({ error: "No account found with that user." });
+    }
+    //exclude passwordHash from response
+    const { passwordHash, ...safeUser } = user.toObject();
+    res.status(200).json(safeUser);
+
+  } catch (err) {
+    console.error("Error retrieving user data:", err);
+    res.status(500).json({ error: "Server error during user data retrieval." });
   }
 });
 

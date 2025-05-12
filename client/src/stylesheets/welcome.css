@@ -14,13 +14,18 @@
     border-radius: 20px;
 }
 
-.welcome-button {
+button.welcome-button, .welcome-button  {
     font-size: 20px;
     background-color: rgb(188, 181, 181);
     text-decoration: none;
     color: White;
     border-radius: 10px;
     padding: 10px;
+    transition: background 0.2s ease-in-out;
+}
+
+button.colored:hover {
+    background-color: #ff4500;
 }
 
 .button-margin {
