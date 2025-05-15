@@ -1,6 +1,6 @@
 import "../stylesheets/forms.css";
 import "../stylesheets/welcome.css" 
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import Postcard from './Postcard.js'
 //import Model from "../models/model.js";

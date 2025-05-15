@@ -3,10 +3,12 @@ import React, { useState } from "react";
 import {TextBox, validateLinks} from "./FormComponents";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { ErrorPage } from "./WelcomePage";
 
 export default function CommunityCreatePage() {
     const navigate = useNavigate();
     const [error, setError] = useState('');
+    const [errorPage, setErrorPage] = useState(null)
 
 
     async function handleForm(e){
@@ -33,12 +35,17 @@ export default function CommunityCreatePage() {
                 console.log(community);
                 await navigate(`/${encodeURIComponent(community._id)}`);
             } catch (err) {
+                console.log(err)
                 console.error("Community creation failed:", err);
-                setError("Failed to create community");
+                if (err.status === 500 || err.response.data.welcomePage){
+                    setErrorPage(err.response.data.error)
+                }else
+                    setError(err.response.data.error);
             }
         }
     }
-
+    if (errorPage)
+        return(<ErrorPage error={errorPage}/>)
     return(
         <form className="create-page" id="create-community-form" onSubmit={handleForm}>
             <TextBox name="Community Name" maxchars="100" placeholder="Name...(Max 100 Characters)"/>

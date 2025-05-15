@@ -134,7 +134,7 @@ async function init() {
     postedBy: userMap['wonderz']._id, //post author
     communityId: community._id, //set after community creation
     views: 42,
-    voteCount: 2,
+    voteCount: 0,
     upvoters: [userMap['fantasy']._id],
     downvoters: [userMap['random']._id],
     linkFlairID: flairs[0]._id,
@@ -144,6 +144,9 @@ async function init() {
     //add post to community’s postIDs and save
     community.postIDs.push(post._id);
     await community.save();
+
+    regularUsers[1].posts.push(post._id)
+    await regularUsers[1].save()
 
   //final message
   console.log("Database initialized with test data.");

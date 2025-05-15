@@ -49,7 +49,7 @@ div .post-content {
 
 /* Affix Add Comment button for expanded post */
 .add-comment {
-    margin-top: 5px;
+    margin-top: 8px;
     margin-bottom: 5px;
     background-color: rgb(255, 255, 255);
     color: rgb(0, 0, 0);

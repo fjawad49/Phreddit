@@ -116,6 +116,10 @@ app.get("/:communityID/post/:postID", async function (req, res) {
 
     post = post.toObject()
 
+    if (post.commentIDs.length > 0) {
+      post.commentIDs = post.commentIDs.map(truncateCommenter)
+    }
+
     post.postedBy = post.postedBy.displayName
     res.json({ post: post, commName: community.name});
 
@@ -124,6 +128,13 @@ app.get("/:communityID/post/:postID", async function (req, res) {
     res.status(500).send("Server error retrieving post");
   }
 });
+
+function truncateCommenter(comment) {
+  comment.commentedBy = comment.commentedBy.displayName;
+  if (comment.commentIDs.length > 0)
+    comment.commentIDs = comment.commentIDs.map(truncateCommenter);
+  return comment;
+}
 
 app.get("/linkflairs", async function (req, res) {
   console.log("GET /linkflairs");
@@ -150,7 +161,7 @@ app.post("/new-linkflair", async function (req, res) {
 });
 
 async function populateComments(commentID) {
-  let comment = await CommentsModel.findById(commentID);
+  let comment = await CommentsModel.findById(commentID).populate('commentedBy')
   if (comment.commentIDs.length > 0)
     comment.commentIDs = await Promise.all(comment.commentIDs.map(populateComments));
   return comment;
@@ -160,7 +171,7 @@ app.post("/new-community", async function (req, res) {
   console.log("POST /new-community");
 
   if(!req.session.user){
-    return res.status(401).json({error: "User not logged in."});
+    return res.status(401).json({error: "User not logged in.", welcomePage: true});
   }
   try {
     //check for unique community name
@@ -172,7 +183,7 @@ app.post("/new-community", async function (req, res) {
     //get logged-in user
     const user = await UserModel.findOne({ displayName: req.session.user });
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: "User not found.", welcomePage: true });
     }
 
     //create community
@@ -204,7 +215,7 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
 
   //ensure user is logged in
   if (!req.session.user) {
-    return res.status(401).json({ error: "User not logged in." });
+    return res.status(401).json({ error: "User not logged in.", welcomePage: true });
   }
 
   try {
@@ -217,7 +228,7 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
     //get the user 
     const user = await UserModel.findOne({ displayName: req.session.user });
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: "User not found.", welcomePage: true });
     }
 
     //pull required post fields from the request
@@ -232,7 +243,7 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
     const newPost = new PostsModel({
       title,
       content,
-      communityId: req.params.communityID,
+      communityId: community._id,
       postedBy: user._id, //set from session
       linkFlairID: linkFlairID || null,
       createdAt: new Date(),
@@ -251,10 +262,13 @@ app.post("/communities/:communityID/new-post", async function (req, res) {
       { $push: { postIDs: newPost._id } }
     );
 
+    user.posts.push(newPost._id);
+    await user.save();
+    
     res.status(201).send(newPost);
   } catch (err) {
     console.error("Error creating post:", err);
-    res.status(500).send("Failed to create post");
+    res.status(500).send({error: "Failed to create post", welcomePage: true});
   }
 });
 
@@ -316,7 +330,7 @@ app.get("/search", async function (req, res) {
       .filter(word => !stopWords.includes(word));
 
     //convert terms to case-insensitive regexes
-    const regexes = searchTerms.map(term => new RegExp(term, "i"));
+    const regexes = searchTerms.map(term => new RegExp("\\b" + term + "\\b", "i"));
 
     //load all posts (with flair + community metadata)
     const allPosts = await PostsModel.find({})
@@ -341,11 +355,12 @@ app.get("/search", async function (req, res) {
       }
       return all;
     }
-
     //for each post, search in title, content, and all nested comments
     for (const post of allPosts) {
       const titleMatch = regexes.some(regex => regex.test(post.title));
       const contentMatch = regexes.some(regex => regex.test(post.content));
+      console.log(titleMatch)
+      console.log(contentMatch)
 
       //get all comments (recursively)
       const allComments = await getAllNestedComments(post.commentIDs || []);
@@ -357,10 +372,17 @@ app.get("/search", async function (req, res) {
 
       //if match in title or content or any comment — include this post
       if (titleMatch || contentMatch || commentMatch) {
-        matches.push(post);
+        const user = await UserModel.findById(post.postedBy)
+        const postComments = await Promise.all( 
+          post.commentIDs.map(populateComments)
+        )
+        JSONpost = post.toObject()
+        JSONpost.commentIDs = postComments
+        JSONpost.postedBy = user.displayName
+        console.log(JSONpost.commentIDs)
+        matches.push(JSONpost);
       }
     }
-
     //send matching posts back to frontend
     res.json(matches);
   } catch (err) {
@@ -370,28 +392,28 @@ app.get("/search", async function (req, res) {
 });
 
 app.post("/vote/post/:postID", async (req, res) => {
-  console.log("VOTE");
   const { postID } = req.params;
+  console.log(`POST /vote/post/${postID}`);
   const { voteType } = req.body;
+  //voter has sufficient reputation
+  const user = await UserModel.findOne({ displayName: req.session.user });
+  if (!user || user.reputation < 50) {
+    return res.status(403).send("Insufficient reputation to vote.");
+  }
   //vote type
   if (!["upvote", "downvote", "no-vote"].includes(voteType)) {
     return res.status(400).send("Invalid vote type.");
   }
 
-  try {
-    //voter has sufficient reputation
-    const user = await UserModel.findOne({ displayName: req.session.user });
-    console.log(user)
-    if (!user || user.reputation < 50) {
-      return res.status(403).send("Insufficient reputation to vote.");
-    }
-    //fetch post to vote on
+    //fetch post/comment to vote on
     const target = await PostsModel.findById(postID);
     if (!target) return res.status(404).send(`Post not found.`);
     //prevent duplicate votes 
     const hasUpvoted = target.upvoters?.some(id => id.equals(user._id));
     const hasDownvoted = target.downvoters?.some(id => id.equals(user._id));
         console.log(`voteType: ${voteType}`)
+                  console.log(`${hasUpvoted} ${hasDownvoted}`)
+
     if (voteType !== "no-vote" && (hasUpvoted || hasDownvoted)) {
       return res.status(400).send("You have already voted.");
     }
@@ -399,6 +421,60 @@ app.post("/vote/post/:postID", async (req, res) => {
     if (voteType === "no-vote" && !hasUpvoted && !hasDownvoted) {
       return res.status(400).send("You have no vote.");
     }
+
+  try {
+    const voteInfo = await handleVotes(postID, target, voteType, hasUpvoted, user)
+    //return the updated vote count to the client
+    res.status(200).json({ userVote: voteInfo[0], voteCount: voteInfo[1] });
+  } catch (err) {
+    console.error("Voting error:", err);
+    res.status(500).send("Voting failed.");
+  }
+});
+
+app.post("/vote/comment/:commentID", async (req, res) => {
+  const { commentID } = req.params;
+  console.log(`POST /vote/comment/${commentID}`);
+  const { voteType } = req.body;
+  //voter has sufficient reputation
+  const user = await UserModel.findOne({ displayName: req.session.user });
+  if (!user || user.reputation < 50) {
+    return res.status(403).send("Insufficient reputation to vote.");
+  }
+  console.log(user)
+  //vote type
+  if (!["upvote", "downvote", "no-vote"].includes(voteType)) {
+    return res.status(400).send("Invalid vote type.");
+  }
+
+    //fetch post/comment to vote on
+    const target = await CommentsModel.findById(commentID);
+    if (!target) return res.status(404).send(`Comment not found.`);
+    console.log(target.upvoters)
+    //prevent duplicate votes 
+    const hasUpvoted = target.upvoters?.some(id => id.equals(user._id));
+    const hasDownvoted = target.downvoters?.some(id => id.equals(user._id));
+        console.log(`voteType: ${voteType}`)
+          console.log(`${hasUpvoted} ${hasDownvoted}`)
+
+    if (voteType !== "no-vote" && (hasUpvoted || hasDownvoted)) {
+      return res.status(400).send("You have already voted.");
+    }
+    if (voteType === "no-vote" && !hasUpvoted && !hasDownvoted) {
+      return res.status(400).send("You have no vote.");
+    }
+
+  try {
+    const voteInfo = await handleVotes(commentID, target, voteType, hasUpvoted, user, CommentsModel)
+    //return the updated vote count to the client
+    res.status(200).json({ userVote: voteInfo[0], voteCount: voteInfo[1] });
+  } catch (err) {
+    console.error("Voting error:", err);
+    res.status(500).send("Voting failed.");
+  }
+});
+
+async function handleVotes(id, target, voteType, hasUpvoted, user, model=PostsModel){
     var userVote;
     var noneVote = false
     //add voter to the appropriate list
@@ -421,8 +497,8 @@ app.post("/vote/post/:postID", async (req, res) => {
       console.log("remove upvote")
       noneVote = true
       target.voteCount = (target.upvoters.length) - (target.downvoters.length) - 1
-      await PostsModel.findByIdAndUpdate(
-        postID,
+      await model.findByIdAndUpdate(
+        id,
         {  
           $set : {voteCount : (target.upvoters.length) - (target.downvoters.length) - 1},
           $pull: {upvoters: user._id} 
@@ -433,8 +509,8 @@ app.post("/vote/post/:postID", async (req, res) => {
       console.log("remove downvote")
       noneVote = true
       target.voteCount = (target.upvoters.length) - (target.downvoters.length) + 1
-      await PostsModel.findByIdAndUpdate(
-        postID,
+      await model.findByIdAndUpdate(
+        id,
         {  
           $set : {voteCount : (target.upvoters.length) - (target.downvoters.length) + 1},
           $pull: {downvoters: user._id} 
@@ -443,7 +519,7 @@ app.post("/vote/post/:postID", async (req, res) => {
     }
 
     //update the author's reputation 
-    const author = await UserModel.findById(target.postedBy);
+    const author = await UserModel.findById(model === PostsModel ? target.postedBy : target.commentedBy);
     if (!noneVote && author) {
       const repChange = voteType === "upvote" ? 5 : -10;
       author.reputation += repChange;
@@ -454,14 +530,8 @@ app.post("/vote/post/:postID", async (req, res) => {
       await author.save();
     }
 
-    //return the updated vote count to the client
-    res.status(200).json({ userVote: userVote, voteCount: target.voteCount });
-  } catch (err) {
-    console.error("Voting error:", err);
-    res.status(500).send("Voting failed.");
-  }
-});
-
+    return [userVote, target.voteCount]
+}
 
 app.get("/communities/:communityID", async function (req, res) {
   const { communityID } = req.params;
@@ -524,20 +594,29 @@ app.get("/comments/:commentID", async function (req, res) {
   }
 });
 
-app.post("/comment/:commentID/reply", async function (req, res) {
+app.post("/comment/:communityID/:postID/:commentID/reply", async function (req, res) {
   console.log(`POST comment/${req.params.commentID}/reply`);
   try {
     const comment = await CommentsModel.findById(req.params.commentID);
-    if (!comment) {
-      return res.status(404).send("Comment not found");
-    }
     if (!req.session.user) {
-      return res.status(401).send("Not logged in");
+      return res.status(401).send("User not logged in");
     }
     const user = await UserModel.findOne({ displayName: req.session.user });
     if (!user) {
       return res.status(404).send("User not found");
     }
+    const community = await CommunitiesModel.findById(req.params.communityID);
+    if (!community) {
+      return res.status(404).send("Community not found");
+    }
+    const post = await PostsModel.findById(req.params.postID);
+    if (!post) {
+      return res.status(404).send("Post not found");
+    }
+    if (!comment) {
+      return res.status(404).send("Comment not found");
+    }
+    
     
     const newComment = new CommentsModel({
       content: req.body.content,
@@ -556,14 +635,30 @@ app.post("/comment/:commentID/reply", async function (req, res) {
   }
 })
 
-app.post("/post/:postID/new-comment", async function (req, res) {
+app.post("/post/:communityID/:postID/new-comment", async function (req, res) {
   console.log(`POST post/${req.params.postID}/new-comment`);
   try {
+    if (!req.session.user) {
+      return res.status(401).send("User not logged in");
+    }
+    const user = await UserModel.findOne({ displayName: req.session.user });
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    const community = await CommunitiesModel.findById(req.params.communityID);
+    if (!community) {
+      return res.status(404).send("Community not found");
+    }
     const post = await PostsModel.findById(req.params.postID);
     if (!post) {
       return res.status(404).send("Post not found");
     }
-    const newComment = new CommentsModel(req.body);
+    const newComment = new CommentsModel({
+      content: req.body.content,
+      commentedBy: user._id,
+      commentedDate: new Date(),
+      commentIDs: [],
+    });
     await newComment.save();
     post.commentIDs.unshift(newComment._id);
     await post.save()
@@ -705,7 +800,7 @@ app.get("/user-communities", async function (req, res) {
       res.status(500).send("Server error returning user communities.")
     }
   }else{
-    res.status(400).send("No valid session found.")
+    res.status(400).send("User not logged in.")
   }
 })
 

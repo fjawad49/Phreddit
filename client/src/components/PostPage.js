@@ -143,9 +143,16 @@ export default function PostPage() {
 
                 {!isGuest && user.reputation >= 50 && (
                   <span className="post-vote-inline">
-                    <button className={userVote === "upvote" ? "vote-button small clicked" : "vote-button small"} onClick={() => handlePostVote(userVote === "upvote" ? "no-vote" : "upvote")}>▲</button>
-                    <button className={userVote === "downvote" ? "vote-button small clicked" : "vote-button small"} onClick={() => handlePostVote(userVote === "downvote" ? "no-vote" : "downvote")}>▼</button>
+                    <button className={userVote === "upvote" ? "vote-button small clicked" : "vote-button small"} onClick={() => user && handlePostVote(userVote === "upvote" ? "no-vote" : "upvote")}>▲</button>
+                    <button className={userVote === "downvote" ? "vote-button small clicked" : "vote-button small"} onClick={() => user && handlePostVote(userVote === "downvote" ? "no-vote" : "downvote")}>▼</button>
                   </span>
+                )}                
+              </div>
+              <div>
+                {!isGuest && (
+                      <button className="add-comment" onClick={handleAddComment}>
+                        Add Comment
+                      </button>
                 )}
               </div>
 

@@ -7,7 +7,7 @@ import axios from 'axios';
 const NavBar = () => {
   const location = useLocation()
   const [loadedCommunities, setLoadedCommunities] = useState([]);
-  const user = localStorage.getItem("user");
+  const user = JSON.parse(localStorage.getItem("user"));
 
 
   // Ensure communities are loaded into state when received
@@ -18,7 +18,7 @@ const NavBar = () => {
         if (user && user._id) {
           const joined = [];
           const notJoined = [];
-
+          console.log(true)
           res.data.forEach(comm => {
             if (comm.members && comm.members.includes(user._id)) {
               joined.push(comm);
@@ -26,7 +26,6 @@ const NavBar = () => {
               notJoined.push(comm);
             }
           });
-
           setLoadedCommunities([...joined, ...notJoined]);
         } else {
           //guest user sees original order

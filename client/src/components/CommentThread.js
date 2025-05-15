@@ -28,6 +28,7 @@ function Comment ( {cID, pID, comment, level, hideReply, showVoteCount, hideVoti
   const [voteCount, setVoteCount] = useState(comment.voteCount || 0);
   const [error, setError] = useState(null);
   const user = JSON.parse(localStorage.getItem("user"));
+  const [userVote, setUserVote] = useState(null)
 
   const handleReply = () => {
       navigate(`/${cID}/posts/${pID}/comment/${comment._id}/reply`);
@@ -46,25 +47,27 @@ function Comment ( {cID, pID, comment, level, hideReply, showVoteCount, hideVoti
               startIndex = hyperLinks[text]["endIndex"] + 1;
       });
       description.push(comment.content.substring(startIndex));
-      setLinkedDescription(description)
+      setLinkedDescription(description);
+
+      if (user){
+        if (comment.upvoters.includes(user._id))
+          setUserVote("upvote")
+        else if (comment.downvoters.includes(user._id))
+          setUserVote("downvote")
+        else
+          setUserVote("no-vote")
+      }
   }, [comment]);
 
   const vote = async (type) => {
-    if (!user || user.reputation < 50) {
-      setError("Voting requires an account with reputation ≥ 50.");
-      return;
-    }
-
     try {
-      const res = await axios.post(
-        `http://localhost:8000/vote/comment/${comment._id}`,
-        {
-          voterID: user._id,
-          voteType: type,
-        }
-      );
-
-      setVoteCount(res.data.updatedVoteCount);
+      if (userVote === "no-vote" || userVote === "upvote" && type === "no-vote" || userVote === "downvote" && type === "no-vote"){
+        const res = await axios.post(
+          `http://localhost:8000/vote/comment/${comment._id}`,{voteType: type},{withCredentials: true}
+        );
+        setUserVote(res.data.userVote)
+        setVoteCount(res.data.voteCount);
+      }
     } catch (err) {
       console.error(err);
       setError(
@@ -74,12 +77,12 @@ function Comment ( {cID, pID, comment, level, hideReply, showVoteCount, hideVoti
   };
 
   return (
-    <div key={comment._id} className="comment-container" style={{ marginLeft: `${level * 20}px` }}>
+    <div key={comment._id} className="comment-container" style={{ marginLeft: `${level * 60}px` }}>
       {!hideVoting && (
         <div className="vote-column">
-          <button className="vote-button" onClick={() => vote("upvote")}>▲</button>
+          <button className={userVote === "upvote" ? "vote-button clicked" : "vote-button"} onClick={() => {user && vote(userVote === "upvote" ? "no-vote" : "upvote")}}>▲</button>
           <div className="vote-count">{voteCount}</div>
-          <button className="vote-button" onClick={() => vote("downvote")}>▼</button>
+          <button className={userVote === "downvote" ? "vote-button clicked" : "vote-button"} onClick={ () => {user && vote(userVote === "downvote" ? "no-vote" : "downvote")}}>▼</button>
         </div>
       )}
       <div className="comment-body">
@@ -91,7 +94,7 @@ function Comment ( {cID, pID, comment, level, hideReply, showVoteCount, hideVoti
         </div>
         <div className="comment-content">{linkedDescription}</div>
         {!hideReply && (
-          <button className="reply-button" onClick={handleReply}>Reply</button>
+          <button className="reply-button" onClick={user && handleReply}>Reply</button>
         )}
         {error && <div className="error-text">{error}</div>}
       </div>

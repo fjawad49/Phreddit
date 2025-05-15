@@ -4,6 +4,8 @@ import Postcard from "./Postcard";
 import "./../stylesheets/search.css";
 //import { getAllChildComments, getEarliestDate } from "./CommentThread.js";
 import axios from 'axios';
+import { getEarliestDate } from "./CommentThread";
+import { ErrorPage } from "./WelcomePage";
 
 const SearchResults = () => {
   const location = useLocation();
@@ -136,7 +138,12 @@ const SearchResults = () => {
   
         const res = await axios.get(`http://localhost:8000/search?q=${searchQuery}`);
         const formattedPosts = res.data.map(post => {
-          let commentCount = post.commentIDs?.length ?? 0;
+          let commentCount = 0;
+          function incrementCommCount(){
+              commentCount += 1;
+          }
+          const commentEarliestDates = post.commentIDs?.map(comment => getEarliestDate(comment, incrementCommCount));
+          const sortedComments = commentEarliestDates?.sort((a,b) => b-a);
           return {
             ...post,
             timestamp: new Date(post.postedDate),
@@ -195,11 +202,7 @@ const SearchResults = () => {
 
   if (error) {
     return (
-      <div className="error-screen">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={() => window.location.href = "/"}>Return to Welcome Page</button>
-      </div>
+      <ErrorPage error={error}/>
     );
   }  
 

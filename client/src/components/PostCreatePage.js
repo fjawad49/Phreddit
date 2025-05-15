@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { TextBox, validateLinks, DropDown } from "./FormComponents";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { ErrorPage } from "./WelcomePage";
 
 export default function PostCreatePage() {
     const navigate = useNavigate();
     const [error, setError] = useState('');
     const [communities, setCommunities] = useState([]);
     const [linkFlairs, setLinkFlairs] = useState([]);
+    const [errorPage, setErrorPage] = useState(null);
+
 
     useEffect(() => {
         async function fetchData() {
@@ -29,11 +32,14 @@ export default function PostCreatePage() {
                 setLinkFlairs(flairRes.data);
             } catch (err) {
                 console.error("Failed to fetch form data:", err);
-                setError("Failed to load form options");
+                setErrorPage(err.response.data || "Failed to load form options");
             }
         }
         fetchData();
     }, []);
+
+    if (errorPage)
+        return(<ErrorPage error={errorPage}/>)
 
     async function handleForm(e){
         e.preventDefault();
@@ -77,11 +83,14 @@ export default function PostCreatePage() {
                 await axios.post(`http://localhost:8000/communities/${communityID}/new-post`, newPost, {
                     withCredentials: true
                 });
-                navigate("/");
+                navigate("/home");
             } catch (err) {
                 console.error("Post creation failed:", err);
                 const msg = err.response?.data?.error || "Failed to submit post";
-                setError(msg);
+                if (err.status === 500 || err.response.data.welcomePage === true)
+                    setErrorPage(msg)
+                else
+                    setError(msg);
             }
         }
 

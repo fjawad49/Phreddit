@@ -3,13 +3,16 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TextBox, validateLinks } from "./FormComponents.js";
 import axios from "axios";
+import { ErrorPage } from "./WelcomePage.js";
 axios.defaults.withCredentials = true;
 
 export default function CommentCreatePage() {
     let params = useParams();
     const navigate = useNavigate();
+    const [errorPage, setErrorPage] = useState(null);
 
     const [contentError, setContentError] = useState('');
+    const user = JSON.parse(localStorage.getItem("user"));
 
     async function handleForm(e) {
         setContentError('');
@@ -40,12 +43,12 @@ export default function CommentCreatePage() {
             try {
                 if (params.commentID) {
                     //reply to a comment
-                    await axios.post(`http://localhost:8000/comment/${params.commentID}/reply`, newComment, {
+                    await axios.post(`http://localhost:8000/comment/${params.communityID}/${params.postID}/${params.commentID}/reply`, newComment, {
                         withCredentials: true
                     });
                 } else {
                     //top-level comment to a post
-                    await axios.post(`http://localhost:8000/post/${params.postID}/new-comment`, newComment, {
+                    await axios.post(`http://localhost:8000/post/${params.communityID}/${params.postID}/new-comment`, newComment, {
                         withCredentials: true
                     });
                 }
@@ -53,11 +56,12 @@ export default function CommentCreatePage() {
                 navigate(`/${params.communityID}/posts/${params.postID}`);
             } catch (err) {
                 console.error("Comment creation failed:", err);
-                setContentError("Failed to create comment or reply");
+                setErrorPage(err.response.data || "Failed to create comment or reply");
             }    
         }
     }
-
+    if (errorPage)
+        return(<ErrorPage error={errorPage}/>)
     return (
         <form className="create-page" id="new-comment-form" onSubmit={handleForm}>
             <TextBox

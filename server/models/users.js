@@ -35,6 +35,11 @@ const UserSchema = new mongoose.Schema({
         type: Schema.Types.ObjectId,
         ref: "Community",
         default: []
+    }],
+    posts: [{
+        type: Schema.Types.ObjectId,
+        ref: "Post",
+        default: []
     }]
 });
 
