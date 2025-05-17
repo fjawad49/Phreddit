@@ -24,7 +24,7 @@ Add design docs in *images/*
    The site will be now available at http://localhost:3000
 
 ## Team Member 1 Contribution
-<Sharanya Kataru>
+Sharanya Kataru
 - Implemented MongoDB schemas and init.js script
 - Account creation and login/logout functionality
 - Banner and Navbar UI/logic for both guest and registered users
@@ -36,7 +36,7 @@ Add design docs in *images/*
 - React unit test
 
 ## Team Member 2 Contribution
-<Fahim Jawad>
+Fahim Jawad
 - Set up client/server structure and welcome page
 - Fixed login, logout, and post formatting layout
 - Fixed voting functionality for posts and comments
