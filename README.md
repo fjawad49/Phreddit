@@ -31,7 +31,7 @@ Sharanya Kataru
 - Home page view and behavior for guest and logged-in users
 - Community page view with join/leave logic
 - Search results view for both guests and registered users
-- Post page view for guests and registered users with correct vote/comment UI behavior
+- Post page view for guests and registered users
 - New Community, New Post, and New Comment creation views: Use Cases 15–17
 - React unit test
 
