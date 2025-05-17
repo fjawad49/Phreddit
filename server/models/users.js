@@ -1,6 +1,7 @@
 // User Document Schema
 const mongoose = require('mongoose');
 const communities = require('./communities');
+const comments = require('./comments');
 const { Schema } = mongoose;
 
 const UserSchema = new mongoose.Schema({
@@ -34,12 +35,20 @@ const UserSchema = new mongoose.Schema({
     communities: [{
         type: Schema.Types.ObjectId,
         ref: "Community",
-        default: []
+        default: [],
+        required: true
     }],
     posts: [{
         type: Schema.Types.ObjectId,
         ref: "Post",
-        default: []
+        default: [],
+        required: true
+    }],
+    comments: [{
+        type: Schema.Types.ObjectId,
+        ref: "Comment",
+        default: [],
+        required: true
     }]
 });
 

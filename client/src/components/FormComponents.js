@@ -60,7 +60,6 @@ export function DropDown( {placeholder = "", required = true, name, values, cust
   const [custom, setCustom] = useState(customInput);
   const handleChange = (e) => {
     const selectedOption = e.target.value;
-
     if (onChange) onChange(selectedOption);
 
     if ((selectedOption === "" || selectedOption === "none") && customInput) {

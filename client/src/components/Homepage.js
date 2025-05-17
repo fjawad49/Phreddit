@@ -5,7 +5,7 @@ import { getEarliestDate } from "./CommentThread.js";
 import axios from 'axios';
 
 const HomePage = () => {
-  const [posts, setPosts] = useState([]);
+  const [sortedPosts, setSortedPosts] = useState([]);
   const [sortOrder, setSortOrder] = useState("newest");
   const [communitiesInfo, setCommunitiesInfo] = useState([]);
   const [userCommunities, setUserCommunities] = useState(null);
@@ -110,28 +110,6 @@ const HomePage = () => {
 
       // Sorting function
       const sortFunc = (a, b) => {
-        if (sortOrder === "newest") return b.timestamp - a.timestamp;
-        if (sortOrder === "oldest") return a.timestamp - b.timestamp;
-        if (sortOrder === "active") {
-          const aTime = a.latestComment || a.timestamp;
-          const bTime = b.latestComment || b.timestamp;
-          return bTime - aTime;
-        }
-        return 0;
-      };
-
-      joinedPosts.sort(sortFunc);
-      notJoinedPosts.sort(sortFunc);
-
-      setJoinedPostCount(joinedPosts.length); //boundary for divider
-      setPosts([...joinedPosts, ...notJoinedPosts]);
-      console.log([joinedPosts])
-    } catch (error) {
-      console.error("Error in useEffect:", error);
-    }
-  }, [communitiesInfo, sortOrder]);
-
-const sortedPosts = [...posts].sort((a, b) => {
     if (sortOrder === "newest") return b.timestamp - a.timestamp;
     if (sortOrder === "oldest") return a.timestamp - b.timestamp;
     if (sortOrder === "active") {
@@ -148,7 +126,18 @@ const sortedPosts = [...posts].sort((a, b) => {
         }
     }
     return 0;
-});
+};
+
+      joinedPosts.sort(sortFunc);
+      notJoinedPosts.sort(sortFunc);
+
+      setJoinedPostCount(joinedPosts.length); //boundary for divider
+      setSortedPosts([...joinedPosts, ...notJoinedPosts]);
+      console.log([joinedPosts])
+    } catch (error) {
+      console.error("Error in useEffect:", error);
+    }
+  }, [communitiesInfo, sortOrder]);
 
 return (
     <div className="homepage-container">

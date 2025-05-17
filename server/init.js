@@ -96,26 +96,7 @@ async function init() {
     { content: 'Can school be over already' }
   ]);
 
-  //create nested comment structure: A → B → C
-  const commentC = await Comment.create({
-    content: 'Nested reply',
-    commentedBy: userMap['random']._id , //third-level comment
-    commentIDs: []
-  });
-
-  const commentB = await Comment.create({
-    content: 'Reply to A',
-    commentedBy: userMap['fantasy']._id, //second-level comment
-    commentIDs: [commentC._id] //references commentC as its child
-  });
-
-  const commentA = await Comment.create({
-    content: 'Top-level comment',
-    commentedBy: userMap['wonderz']._id, //top-level comment
-    commentIDs: [commentB._id] //references commentB as its child
-  });
-
-    //create community and add the post and members to it
+      //create community and add the post and members to it
     const community = await Community.create({
         name: 'Community1',
         description: 'Its spring!',
@@ -123,7 +104,7 @@ async function init() {
         createdBy: adminUser._id,
         members: [adminUser._id, ...regularUsers.map(u => u._id)]
       });
-    
+
     adminUser.communities.push(community._id)
     await adminUser.save()
 
@@ -138,8 +119,48 @@ async function init() {
     upvoters: [userMap['fantasy']._id],
     downvoters: [userMap['random']._id],
     linkFlairID: flairs[0]._id,
-    commentIDs: [commentA._id] //top-level comment thread
+    commentIDs: [] //top-level comment thread
   });
+
+    //create nested comment structure: A → B → C
+  const commentC = await Comment.create({
+    content: 'Nested reply',
+    commentedBy: userMap['random']._id , //third-level comment
+    commentIDs: [],
+    community: community._id,
+    post: post._id
+  });
+  regularUsers[2].comments.push(commentC);
+  await regularUsers[2].save()
+
+  const commentB = await Comment.create({
+    content: 'Reply to A',
+    commentedBy: userMap['fantasy']._id, //second-level comment
+    commentIDs: [commentC._id], //references commentC as its child
+    community: community._id,
+    post: post._id
+  });
+  regularUsers[0].comments.push(commentB);
+  await regularUsers[0].save()
+
+  const commentA = await Comment.create({
+    content: 'Top-level comment',
+    commentedBy: userMap['wonderz']._id, //top-level comment
+    commentIDs: [commentB._id], //references commentB as its child
+    community: community._id,
+    post: post._id
+  });
+  regularUsers[1].comments.push(commentA);
+  await regularUsers[1].save()
+  
+  commentC.parentComment = commentB;
+  await commentC.save()
+
+  commentB.parentComment = commentA;
+  await commentB.save();
+
+  post.commentIDs.push(commentA._id);
+  await post.save()
 
     //add post to community’s postIDs and save
     community.postIDs.push(post._id);

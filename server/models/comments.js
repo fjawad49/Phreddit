@@ -32,6 +32,21 @@ const commentSchema = new Schema({
   voteCount: {
     type: Number,
     default: 0
+  },
+  post: {
+    type: Schema.Types.ObjectId,
+    ref: 'Post',
+    required: true
+  },
+  community: {
+    type: Schema.Types.ObjectId,
+    ref: 'Community',
+    required: true
+  },
+  parentComment: {
+    type: Schema.Types.ObjectId,
+    ref: 'Comment',
+    default: null  
   }
 });
 

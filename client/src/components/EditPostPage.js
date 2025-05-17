@@ -89,11 +89,7 @@ export default function EditPostPage() {
         };
 
         try {
-            if (isEditing) {
-                await axios.put(`http://localhost:8000/update-post/${id}`, postData, { withCredentials: true });
-            } else {
-                await axios.post(`http://localhost:8000/communities/${selectedCommunity}/new-post`, postData, { withCredentials: true });
-            }
+            await axios.put(`http://localhost:8000/update-post/${id}`, postData, { withCredentials: true });
             navigate("/profile");
         } catch (err) {
             console.error("Submit failed:", err);

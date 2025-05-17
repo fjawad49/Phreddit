@@ -7,7 +7,7 @@ import axios from 'axios';
 const NavBar = () => {
   const location = useLocation()
   const [loadedCommunities, setLoadedCommunities] = useState([]);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
 
 
   // Ensure communities are loaded into state when received
@@ -16,6 +16,16 @@ const NavBar = () => {
       .then(res => {
         //if user logged in, sort communities so that joined ones appear first
         if (user && user._id) {
+          axios.get('http://localhost:8000/user-data')
+            .then(res=>{
+              setUser(res.data)
+              localStorage.setItem('user', JSON.stringify(res.data));
+            })
+            .catch(err=>{
+              console.log("Could not fetch user data: " + err);
+            })
+
+  
           const joined = [];
           const notJoined = [];
           console.log(true)

@@ -41,6 +41,8 @@ const CommunitiesModel = require("./models/communities.js");
 const PostsModel = require("./models/posts.js");
 const CommentsModel = require("./models/comments.js");
 const LinkFlairsModel = require("./models/linkflairs.js");
+const comments = require('./models/comments.js');
+const users = require('./models/users');
 
 app.get("/communities", async function (req, res) {
     console.log("GET /communities");
@@ -587,7 +589,7 @@ app.get("/comments/:commentID", async function (req, res) {
     if (!comment) {
       return res.status(404).send("Comment not found");
     }
-    res.send(comment);
+    res.send({comment});
   } catch (err) {
     console.error("Error fetching comment:", err);
     res.status(500).send("Failed to fetch comment");
@@ -623,8 +625,13 @@ app.post("/comment/:communityID/:postID/:commentID/reply", async function (req, 
       commentedBy: user._id,
       commentedDate: new Date(),
       commentIDs: [],
+      community: community._id,
+      post: post._id,
+      parentComment: comment._id
     });
     
+    user.comments.push(newComment._id);
+    await user.save();
     await newComment.save();
     comment.commentIDs.unshift(newComment._id);
     await comment.save()
@@ -658,10 +665,14 @@ app.post("/post/:communityID/:postID/new-comment", async function (req, res) {
       commentedBy: user._id,
       commentedDate: new Date(),
       commentIDs: [],
+      community: community._id,
+      post: post._id
     });
     await newComment.save();
     post.commentIDs.unshift(newComment._id);
     await post.save()
+    user.comments.push(newComment._id);
+    await user.save();
     res.status(201).send(newComment);
   } catch (err) {
     console.error("Error creating new comment:", err);
@@ -759,6 +770,7 @@ app.get("/user-data", async function (req, res) {
 
   if (!req.session.user){
     res.status(400).json({ error: "No account associated with request." });
+    return
   }
 
   try {
@@ -824,60 +836,57 @@ app.get("/user/profile", async function (req, res) {
 });
 
 app.get("/user/posts", async function (req, res) {
+  console.log("GET user/posts")
   if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in." });
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true  });
   }
 
   try {
-    const user = await UserModel.findOne({ displayName: req.session.user });
-    const posts = await PostsModel.find({ postedBy: user._id }, "_id title");
-    res.status(200).json(posts);
+    const user = await UserModel.findOne({ displayName: req.session.user }).populate('posts');
+    res.status(200).json(user.posts);
   } catch (err) {
     console.error("Error fetching user posts:", err);
-    res.status(500).send("Failed to fetch user posts");
+    res.status(500).send({error: "Failed to fetch user posts"});
   }
 });
 
 app.get("/user/comments", async function (req, res) {
+    console.log("GET user/comments")
   if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in." });
+    return res.status(401).json({ error: "Not logged in." , welcomePage: true });
   }
 
   try {
-    const user = await UserModel.findOne({ displayName: req.session.user });
-    const comments = await CommentsModel.find({ commentedBy: user._id });
-
+    const user = await UserModel.findOne({ displayName: req.session.user }).populate('comments');
+    const comments = user.comments;
+    console.log(comments)
     //find the post title for each top-level comment
-    const allPosts = await PostsModel.find({}, "_id title commentIDs");
     const commentPostPairs = [];
 
     for (const comment of comments) {
-      let matchedPost = allPosts.find(post =>
-        post.commentIDs.map(id => id.toString()).includes(comment._id.toString())
-      );
+      const post = await PostsModel.findById(comment.post)
 
       //include comments that belong to a known post
-      if (matchedPost) {
-        commentPostPairs.push({
-          _id: comment._id,
-          content: comment.content,
-          postTitle: matchedPost.title
-        });
-      }
+      commentPostPairs.push({
+        _id: comment._id,
+        content: comment.content,
+        postTitle: post.title
+      });
     }
 
     res.status(200).json(commentPostPairs);
   } catch (err) {
     console.error("Error fetching user comments:", err);
-    res.status(500).send("Failed to fetch user comments");
+    res.status(500).send({error: "Failed to fetch user comments", welcomePage: true });
   }
 });
 
 app.get("/user/communities", async function (req, res) {
+  console.log("GET user/communities")
   if (!req.session.user) {
     console.log("NO SESSION FOUND");
     console.log("Full session object:", req.session);
-    return res.status(401).json({ error: "Not logged in." });
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true  });
   }
 
   try {
@@ -886,7 +895,62 @@ app.get("/user/communities", async function (req, res) {
     res.status(200).json(communities);
   } catch (err) {
     console.error("Error fetching user communities:", err);
-    res.status(500).send("Failed to fetch user communities");
+    res.status(500).send({error: "Failed to fetch user communities", welcomePage: true });
+  }
+});
+
+app.get("/admin/users/:user/posts", async function (req, res) {
+  console.log("GET /admin/users/:user/posts")
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true  });
+  }
+  const user = await UserModel.findOne({ displayName: req.session.user });
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Admin access only.", welcomePage: true });
+  }
+  try {
+    const reqUser = await UserModel.findById(req.params.user).populate('posts');
+    res.status(200).json(reqUser.posts);
+  } catch (err) {
+    console.error("Error fetching requested user's posts:", err);
+    res.status(500).send({error: "Failed to fetch requested user's posts", welcomePage: true });
+  }
+});
+
+app.get("/admin/users/:user/communities", async function (req, res) {
+  console.log("GET /admin/users/:user/communities")
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true  });
+  }
+  const user = await UserModel.findOne({ displayName: req.session.user });
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Admin access only.", welcomePage: true });
+  }
+  try {
+    const reqUser = await UserModel.findById(req.params.user).populate('communities');
+    res.status(200).json(reqUser.communities);
+  } catch (err) {
+    console.error("Error fetching requested user's communities:", err);
+    res.status(500).send({error: "Failed to fetch requested user's communities", welcomePage: true });
+  }
+});
+
+app.get("/admin/users/:user/comments", async function (req, res) {
+  console.log("GET /admin/users/:user/comments")
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true  });
+  }
+  const user = await UserModel.findOne({ displayName: req.session.user });
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Admin access only.", welcomePage: true });
+  }
+  try {
+    const reqUser = await UserModel.findById(req.params.user).populate('comments');
+    console.log(reqUser.comments)
+    res.status(200).json(reqUser.comments);
+  } catch (err) {
+    console.error("Error fetching requested user's comments:", err);
+    res.status(500).send({error: "Failed to fetch requested user's comments", welcomePage: true });
   }
 });
 
@@ -934,8 +998,18 @@ app.delete("/delete-post/:id", async (req, res) => {
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
+    const user = await UserModel.findById(post.postedBy)
+    user.posts = user.posts.filter(pID => pID != post._id);
+    await user.save();
+
+    const community = await CommunitiesModel.findById(post.communityId);
+    community.postIDs = community.postIDs.filter(pID => pID !== post._id)
+
+    post.commentIDs.forEach(commentID => deleteComments(commentID))
+    
 
     await PostsModel.findByIdAndDelete(req.params.id);
+
     res.status(200).json({ success: true });
   } catch (err) {
     console.error("Error deleting post:", err);
@@ -945,23 +1019,27 @@ app.delete("/delete-post/:id", async (req, res) => {
 
 app.put("/update-community/:id", async function (req, res) {
   if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in." });
+    return res.status(401).json({ error: "Not logged in.", welcomePage:true });
   }
 
   try {
     const community = await CommunitiesModel.findById(req.params.id);
     if (!community) {
-      return res.status(404).json({ error: "Community not found." });
+      return res.status(404).json({ error: "Community not found.", welcomePage:true });
     }
 
     const user = await UserModel.findOne({ displayName: req.session.user });
     if (!user || !community.createdBy.equals(user._id)) {
-      return res.status(403).json({ error: "Unauthorized to edit this community." });
+      return res.status(403).json({ error: "Unauthorized to edit this community.", welcomePage:true });
     }
 
     const { name, description } = req.body;
+
     if (!name || !description) {
       return res.status(400).json({ error: "Name and description are required." });
+    }
+    if (name.length > 100) {
+      return res.status(400).json({ error: "Name cannot exceed 100 characters" });
     }
 
     community.name = name;
@@ -975,9 +1053,36 @@ app.put("/update-community/:id", async function (req, res) {
   }
 });
 
+async function deleteComments(commentID) {
+  let comment = await CommentsModel.findById(commentID)
+  if (comment.commentIDs.length > 0)
+    comment.commentIDs = await Promise.all(comment.commentIDs.map(deleteComments));
+  const commenter = await UserModel.findById(comment.commentedBy);
+  commenter.comments = commenter.comments.filter(c => c !== comment._id);
+  await commenter.save()
+  await CommentsModel.findByIdAndDelete(comment._id)
+  return comment;
+}
+
 app.delete("/delete-community/:id", async function (req, res) {
   try {
-    const deleted = await CommunitiesModel.findByIdAndDelete(req.params.id);
+    const community = await CommunitiesModel.findById(req.params.id);
+    const creator = await UserModel.findById(community.createdBy);
+    
+    creator.communities = creator.communities.filter(c => c !== community._id);
+    await creator.save()
+    community.postIDs.forEach(async (pID) =>{
+      const post = await PostsModel.findById(pID);
+      post.commentIDs.forEach(commentID => deleteComments(commentID))
+
+      const poster = await UserModel.findById(post.postedBy);
+      console.log(poster)
+      poster.posts = poster.posts.filter(p=> p !== post._id);
+      await poster.save()
+      await PostsModel.findByIdAndDelete(post._id)
+    })
+
+    const deleted = await CommunitiesModel.findByIdAndDelete(community._id);
     if (!deleted) {
       return res.status(404).send("Community not found");
     }
@@ -989,13 +1094,18 @@ app.delete("/delete-community/:id", async function (req, res) {
 });
 
 app.put("/update-comment/:id", async function (req, res) {
-  if (!req.session.user) return res.status(401).send("Not authorized");
-  const comment = await CommentsModel.findById(req.params.id);
-  if (!comment) return res.status(404).send("Comment not found");
+    console.log("PUT update comment")
+  try{
+    if (!req.session.user) return res.status(401).send("Not authorized");
+    const comment = await CommentsModel.findById(req.params.id);
+    if (!comment) return res.status(404).send("Comment not found");
 
-  comment.content = req.body.content;
-  await comment.save();
-  res.sendStatus(200);
+    comment.content = req.body.content;
+    await comment.save();
+    res.sendStatus(200);
+  }catch(err){
+    res.status(500).send("Server error")
+  }
 });
 
 async function deleteCommentAndReplies(commentId) {
@@ -1009,20 +1119,41 @@ async function deleteCommentAndReplies(commentId) {
 }
 
 app.delete("/delete-comment/:id", async (req, res) => {
-  if (!req.session.user) return res.status(401).send("Not authorized");
-  await deleteCommentAndReplies(req.params.id);
-  res.sendStatus(200);
+  console.log("delete comment")
+  try{
+    if (!req.session.user) return res.status(401).send("Not authorized");
+    const comment = await CommentsModel.findById(req.params.id);
+    if (comment.parentComment === null){
+      console.log("hello")
+      const post = await PostsModel.findById(comment.post);
+      post.commentIDs = post.commentIDs.filter(cID => cID !== req.params.id);
+      await post.save();
+    }else{
+      const pComment = await CommentsModel.findById(comment.parentComment);
+      pComment.commentIDs = pComment.commentIDs.filter(cID => cID !== req.params.id);
+      await pComment.save();
+    }
+    const user = await UserModel.findById(comment.commentedBy);
+    user.comments = user.comments.filter(cID => cID !== req.params.id);
+    await user.save();
+
+    await deleteCommentAndReplies(req.params.id);
+    res.sendStatus(200);
+  }catch (err){
+    console.log(err)
+    res.status(500).send("Internal server error")
+  }
 });
 
 //get all users
 app.get("/admin/users", async (req, res) => {
   if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in." });
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true });
   }
 
   const currentUser = await UserModel.findOne({ displayName: req.session.user });
   if (!currentUser || currentUser.role !== "admin") {
-    return res.status(403).json({ error: "Admin access only." });
+    return res.status(403).json({ error: "Admin access only.", welcomePage: true });
   }
 
   try {
@@ -1030,33 +1161,49 @@ app.get("/admin/users", async (req, res) => {
     res.json(users);
   } catch (err) {
     console.error("Error fetching users:", err);
-    res.status(500).json({ error: "Failed to load users." });
+    res.status(500).json({ error: "Failed to load users.", welcomePage: true });
   }
 });
 
 //specific users profile
 app.get("/admin/users/:id/profile", async (req, res) => {
   if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in." });
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true  });
   }
 
   const currentUser = await UserModel.findOne({ displayName: req.session.user });
   if (!currentUser || currentUser.role !== "admin") {
-    return res.status(403).json({ error: "Admin access only." });
+    return res.status(403).json({ error: "Admin access only.", welcomePage: true  });
   }
 
   try {
     const user = await UserModel.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: "User not found." });
+    if (!user) return res.status(404).json({ error: "User not found.", welcomePage: true  });
 
     const { _id, displayName, email, dateJoined, reputation, role } = user;
     res.json({ _id, displayName, email, dateJoined, reputation, role });
   } catch (err) {
     console.error("Error fetching profile:", err);
-    res.status(500).json({ error: "Failed to fetch user profile." });
+    res.status(500).json({ error: "Failed to fetch user profile.", welcomePage: true  });
   }
 });
 
+app.get("/check-login", async (req, res) => {
+  console.log ("GET /check-login")
+  console.log(req.session.user)
+  if (req.session.user) {
+    try {
+      const user = await UserModel.findOne({ displayName: req.session.user });
+      const { passwordHash, ...safeUser } = user.toObject();
+      res.status(200).json(safeUser);
+    } catch (err) {
+      console.error("Error during login:", err);
+      res.status(500).json({ error: "Server error during login." });
+    }
+  }else{
+    res.send(null);
+  }
+});
 
 const server = app.listen(8000, () => {console.log("Server listening on port 8000...");});
 

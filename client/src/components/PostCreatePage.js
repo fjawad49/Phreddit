@@ -1,5 +1,5 @@
 import "../stylesheets/forms.css"; 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { TextBox, validateLinks, DropDown } from "./FormComponents";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -7,12 +7,47 @@ import { ErrorPage } from "./WelcomePage";
 
 export default function PostCreatePage() {
     const navigate = useNavigate();
+    const { id } = useParams();
+
     const [error, setError] = useState('');
     const [communities, setCommunities] = useState([]);
     const [linkFlairs, setLinkFlairs] = useState([]);
     const [errorPage, setErrorPage] = useState(null);
+    const [edit, setEdit] = useState(false);
 
+    const [title, setTitle] = useState("");
+    const [content, setContent] = useState("");
+    const [selectedCommunity, setSelectedCommunity] = useState("");
+    const [selectedFlair, setSelectedFlair] = useState("");
+    const [customFlairText, setCustomFlairText] = useState("");
 
+    useEffect(() => {
+
+        
+        if (id && JSON.parse(localStorage.getItem("user"))){
+        axios.get(`http://localhost:8000/posts/${id}`, { withCredentials: true })
+            .then(res => {
+                const post = res.data;
+                setTitle(post.title);
+                setContent(post.content);
+                setSelectedCommunity(post.communityId); //should be a valid _id
+                setSelectedFlair(post.linkFlairID || "");
+            })
+            .catch(err => {
+                console.error("Error loading post:", err);
+                setError("Could not load post for editing.");
+            });
+            setEdit(true);
+        }else{
+            setEdit(false);
+            setTitle("");
+            setContent("");
+            setSelectedCommunity(""); //should be a valid _id
+            setSelectedFlair("");
+            setCustomFlairText("")
+        }
+    }, [id]);
+    
     useEffect(() => {
         async function fetchData() {
             try {
@@ -94,6 +129,45 @@ export default function PostCreatePage() {
             }
         }
 
+    async function handleUpdate(e){
+        e.preventDefault();
+        const links = validateLinks(content);
+        if (!links.success){
+            setError(links.error);
+            return;
+        }
+
+        let flair = selectedFlair;
+        if (!flair || flair === "none") {
+            if (customFlairText.trim()) {
+                try {
+                    const newFlairRes = await axios.post("http://localhost:8000/new-linkflair", { content: customFlairText });
+                    flair = newFlairRes.data._id;
+                } catch (err) {
+                    console.error("Failed to create custom flair:", err);
+                    return setError("Failed to create custom flair");
+                }
+            } else {
+                flair = null;
+            }
+        }
+
+        const postData = {
+            title,
+            content,
+            linkFlairID: flair,
+        };
+
+        try {
+            await axios.put(`http://localhost:8000/update-post/${id}`, postData, { withCredentials: true });
+            navigate("/profile");
+        } catch (err) {
+            console.error("Submit failed:", err);
+            const msg = err.response?.data?.error || "Failed to submit post";
+            setError(msg);
+        }
+    }
+
 
     const values = {};
     communities.forEach(c => values[c.name] = c._id);
@@ -108,13 +182,29 @@ export default function PostCreatePage() {
         placeholder: "Flair...(Max 30 Characters)"
     };
 
+    async function handleDelete() {
+      const confirmDelete = window.confirm("Are you sure you want to delete this post? This cannot be undone.");
+      if (!confirmDelete) return;
+    
+      try {
+        await axios.delete(`http://localhost:8000/delete-post/${id}`, {
+          withCredentials: true
+        });
+        navigate("/profile");
+      } catch (err) {
+        console.error("Delete failed:", err);
+        setError("Failed to delete post");
+      }
+    }
+
     return (
-        <form className="create-page" id="create-community-form" onSubmit={handleForm}>
+        <form className="create-page" id="create-community-form" onSubmit={edit ? handleUpdate : handleForm}>
+             <h2>{edit ? "Edit Post" : "New Post"}</h2>
             <div className="form-group">
-                <DropDown name="Community" values={values} />
+                <DropDown name="Community" values={values} selected={selectedCommunity} onChange={(val) => {setSelectedCommunity(val)}} disabled={edit} />
             </div>
             <div className="form-group">
-                <TextBox name="Title" maxchars="100" placeholder="Title...(Max 100 Characters)" />
+                <TextBox name="Title" maxchars="100" placeholder="Title...(Max 100 Characters)" value={title} onChange={e => setTitle(e.target.value)} />
             </div>
             <div className="form-group">
                 <DropDown
@@ -124,13 +214,25 @@ export default function PostCreatePage() {
                     required={false}
                     customInput={true}
                     customAttributes={customFlair}
+                    selected={selectedFlair}
+                    customValue={customFlairText}
+                    onChange={val => setSelectedFlair(val)}
+                    onCustomChange={e => setCustomFlairText(e.target.value)}
                 />
             </div>
             <div className="form-group">
-                <TextBox name="Content" multiline={true} />
+                <TextBox name="Content" multiline={true} value={content} onChange={e => setContent(e.target.value)} />
             </div>
             <span style={{ color: "red", display: "block" }}>{error && error}</span>
-            <input className="submit-button" type="submit" value="Submit Post" />
+            <input className="submit-button" type="submit" value={edit ? "Save Changes" : "Submit Post"} />
+            {edit && (<button
+                type="button"
+                className="submit-button"
+                style={{ marginTop: "1rem", backgroundColor: "#cc0000" }}
+                onClick={ handleDelete}
+            >
+                Delete Post
+            </button>)}
         </form>
     );
 }    

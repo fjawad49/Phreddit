@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "../stylesheets/profile.css";
 import TimeStamp from './TimeStamp';
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {ErrorPage} from './WelcomePage.js'
 
 export default function UserProfilePage() {
+  const navigate = useNavigate()
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState("posts");
     const [items, setItems] = useState([]);
@@ -38,6 +40,7 @@ export default function UserProfilePage() {
                 withCredentials: true,
               });
           setUser(res.data);
+          if (viewAsUserId) setActiveTab("posts");
         } catch (err) {
           console.error("Failed to load user info", err);
           setError("Could not load profile.");
@@ -74,10 +77,12 @@ export default function UserProfilePage() {
         } catch (err) {
           console.error("Failed to load items", err);
           setItems([]);
-          setError("Could not load " + activeTab);
-        }
+          if (!err.response.data.welcomePage)
+            setError("Could not load " + activeTab);
+          else
+            setError(err.response.data.error)
       }
-
+    }
       fetchItems();
     }, [activeTab, user, viewAsUserId]);
 
@@ -93,6 +98,7 @@ export default function UserProfilePage() {
         try {
             await axios.delete(`http://localhost:8000${endpoint}`, { withCredentials: true });
             setItems(prev => prev.filter(item => item._id !== id));
+            navigate(0)
         } catch (err) {
             console.error("Delete error:", err);
             setError(`Failed to delete ${activeTab.slice(0, -1)}.`);
@@ -101,9 +107,7 @@ export default function UserProfilePage() {
 
     if (error) {
       return (
-        <div className="profile-page">
-          <p style={{ color: "red" }}>{error}</p>
-        </div>
+        <ErrorPage error={error}/>
       );
     }
   
@@ -117,11 +121,6 @@ export default function UserProfilePage() {
   
     const isAdmin = loggedInUser.role === "admin";
     const isSelf = String(loggedInUser._id) === String(user._id);
-    
-    console.log("loggedInUser._id:", loggedInUser._id);
-    console.log("user._id:", user._id);
-    console.log("isSelf:", isSelf);
-    console.log("isAdmin:", isAdmin);
 
     
     return (
@@ -167,48 +166,57 @@ export default function UserProfilePage() {
                 All Users
               </button>
             )}
+            {loggedInUser?.role === "admin" && viewAsUserId && (
+              <button style={{backgroundColor: 'orange', marginLeft: '20%'}}
+                onClick={() => {setActiveTab('users'); navigate('/profile')}}
+              >
+                Back to Profile List
+              </button>
+            )}
           </div>
 
           <div className="listing-section" style={{ marginTop: "2rem" }}>
             {items.length === 0 ? (
               <p>No {activeTab} found.</p>
             ) : (
-              <ul>
-                {items.map((item, idx) => (
-                  <li key={item._id || idx} className="profile-list-item">
-                    {activeTab === "posts" && (
-                      <div className="item-row">
-                        <Link to={`/edit-post/${item._id}`}>{item.title}</Link>
-                        <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
-                      </div>
-                    )}
-                    {activeTab === "communities" && (
-                      <div className="item-row">
-                        <Link to={`/edit-community/${item._id}`}>{item.name}</Link>
-                        <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
-                      </div>
-                    )}
-                    {activeTab === "comments" && (
-                      <div className="item-row">
-                        <Link to={`/edit-comment/${item._id}`}>
-                          On: <em>{item.postTitle || "Unknown Post"}</em> — "
-                          {item.content ? item.content.slice(0, 20) : "[No content]"}..."
-                        </Link>
-                        <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
-                      </div>
-                    )}
-                    {activeTab === "users" && (
-                      <div className="item-row">
-                          <span>
-                              <strong>{item.displayName}</strong> ({item.email}) - Rep: {item.reputation}
-                            </span>
-                            <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
-                            <Link to={`/admin/user/${item._id}`} style={{ marginLeft: "1rem" }}>View</Link>
-                          </div>
-                        )}
-                  </li>
-                ))}
-              </ul>
+              <span>
+                <ul>
+                  {items.map((item, idx) => (
+                    <li key={item._id || idx} className="profile-list-item">
+                      {activeTab === "posts" && (
+                        <div className="item-row">
+                          <Link to={`/edit-post/${item._id}`}>{item.title}</Link>
+                          <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+                        </div>
+                      )}
+                      {activeTab === "communities" && (
+                        <div className="item-row">
+                          <Link to={`/edit-community/${item._id}`}>{item.name}</Link>
+                          <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+                        </div>
+                      )}
+                      {activeTab === "comments" && (
+                        <div className="item-row">
+                          <Link to={`/edit-comment/${item._id}`}>
+                            On: <em>{item.postTitle || "Unknown Post"}</em> — "
+                            {item.content ? item.content.slice(0, 20) : "[No content]"}..."
+                          </Link>
+                          <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+                        </div>
+                      )}
+                      {activeTab === "users" && (
+                        <div className="item-row">
+                            <span>
+                                <strong>{item.displayName}</strong> ({item.email}) - Rep: {item.reputation}
+                              </span>
+                              <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+                              <Link to={`/admin/user/${item._id}`} style={{ marginLeft: "1rem" }}>View</Link>
+                            </div>
+                          )}
+                    </li>
+                  ))}
+                </ul>
+              </span>
             )}
           </div>
         </div>

@@ -1,4 +1,4 @@
-import {useState} from "react"
+import {useEffect, useState} from "react"
 import { useNavigate } from "react-router-dom";
 import "../stylesheets/forms.css";
 import {loginUser} from "./Api";
@@ -19,6 +19,28 @@ export default function LoginPage() {
       [e.target.name]: e.target.value
     });
   };
+
+  useEffect(() => {
+    console.log("hello")
+    try{
+      async function fetchUser () {
+        var res = await axios.get("http://localhost:8000/check-login", { withCredentials:true })
+        console.log(res)
+        if (!res.data){
+          localStorage.removeItem('user')
+        } else{
+          localStorage.setItem('user', JSON.stringify(res.data))
+          navigate("/home");
+        }      
+      }
+      
+      fetchUser()
+
+    }catch (err){
+      console.log(err)
+      setError(err.response.data.error);
+    }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault();
