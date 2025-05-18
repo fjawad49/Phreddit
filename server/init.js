@@ -101,12 +101,14 @@ async function init() {
         name: 'Community1',
         description: 'Its spring!',
         postIDs: [],
-        createdBy: adminUser._id,
+        createdBy: regularUsers[0]._id,
         members: [adminUser._id, ...regularUsers.map(u => u._id)]
       });
 
     adminUser.communities.push(community._id)
     await adminUser.save()
+    
+    regularUsers.forEach(async (user) => await User.updateOne({_id: user._id},{$push:{communities: community._id}}))
 
   //create post that includes nested comments and flair
   const post = await Post.create({

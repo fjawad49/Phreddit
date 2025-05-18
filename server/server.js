@@ -928,7 +928,8 @@ app.get("/admin/users/:user/communities", async function (req, res) {
   }
   try {
     const reqUser = await UserModel.findById(req.params.user).populate('communities');
-    res.status(200).json(reqUser.communities);
+    const communities = await CommunitiesModel.find({createdBy: reqUser._id})
+    res.status(200).json(communities);
   } catch (err) {
     console.error("Error fetching requested user's communities:", err);
     res.status(500).send({error: "Failed to fetch requested user's communities", welcomePage: true });
@@ -998,9 +999,8 @@ app.delete("/delete-post/:id", async (req, res) => {
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
-    const user = await UserModel.findById(post.postedBy)
-    user.posts = user.posts.filter(pID => pID != post._id);
-    await user.save();
+    await UserModel.updateOne({_id: post.postedBy},{$pull:{posts: post._id}})
+
 
     const community = await CommunitiesModel.findById(post.communityId);
     community.postIDs = community.postIDs.filter(pID => pID !== post._id)
@@ -1008,8 +1008,8 @@ app.delete("/delete-post/:id", async (req, res) => {
     post.commentIDs.forEach(commentID => deleteComments(commentID))
     
 
-    await PostsModel.findByIdAndDelete(req.params.id);
-
+    const deleted = await PostsModel.findByIdAndDelete(req.params.id);
+    console.log(deleted)
     res.status(200).json({ success: true });
   } catch (err) {
     console.error("Error deleting post:", err);
@@ -1053,13 +1053,19 @@ app.put("/update-community/:id", async function (req, res) {
   }
 });
 
-async function deleteComments(commentID) {
+async function deleteComments(commentID, commenter=null, checkParent=false) {
   let comment = await CommentsModel.findById(commentID)
   if (comment.commentIDs.length > 0)
-    comment.commentIDs = await Promise.all(comment.commentIDs.map(deleteComments));
-  const commenter = await UserModel.findById(comment.commentedBy);
-  commenter.comments = commenter.comments.filter(c => c !== comment._id);
-  await commenter.save()
+    comment.commentIDs = await Promise.all(comment.commentIDs.map(cID => deleteComments(cID, null)));
+  if (!commenter){
+    console.log("---------------------------")
+    console.log(commentID)
+    console.log(comment)
+    commenter = await UserModel.findById(comment.commentedBy);
+    if (commenter){
+      await UserModel.updateOne({_id: comment.commentedBy}, {$pull:{comments: commentID}})
+    }
+  }
   await CommentsModel.findByIdAndDelete(comment._id)
   return comment;
 }
@@ -1072,15 +1078,18 @@ app.delete("/delete-community/:id", async function (req, res) {
     creator.communities = creator.communities.filter(c => c !== community._id);
     await creator.save()
     community.postIDs.forEach(async (pID) =>{
+      console.log("deleting post")
       const post = await PostsModel.findById(pID);
       post.commentIDs.forEach(commentID => deleteComments(commentID))
 
-      const poster = await UserModel.findById(post.postedBy);
-      console.log(poster)
-      poster.posts = poster.posts.filter(p=> p !== post._id);
-      await poster.save()
+      await UserModel.updateOne({_id: post.postedBy}, {$pull:{posts: pID}})
       await PostsModel.findByIdAndDelete(post._id)
     })
+
+    community.members.forEach(async (memID) =>{
+      await UserModel.updateOne({_id: memID},{$pull:{communities: community._id}})
+    })
+
 
     const deleted = await CommunitiesModel.findByIdAndDelete(community._id);
     if (!deleted) {
@@ -1112,9 +1121,10 @@ async function deleteCommentAndReplies(commentId) {
   const comment = await CommentsModel.findById(commentId);
   if (comment.commentIDs.length > 0) {
     for (const childId of comment.commentIDs) {
-      await deleteCommentAndReplies(childId);
+      deleteCommentAndReplies(childId);
     }
   }
+  await UserModel.updateOne({_id: comment.commentedBy}, {$pull: {comments: comment._id}});
   await CommentsModel.findByIdAndDelete(commentId);
 }
 
@@ -1124,18 +1134,11 @@ app.delete("/delete-comment/:id", async (req, res) => {
     if (!req.session.user) return res.status(401).send("Not authorized");
     const comment = await CommentsModel.findById(req.params.id);
     if (comment.parentComment === null){
-      console.log("hello")
-      const post = await PostsModel.findById(comment.post);
-      post.commentIDs = post.commentIDs.filter(cID => cID !== req.params.id);
-      await post.save();
+      await PostsModel.updateOne({_id: comment.post},{$pull: {commentIDs: comment._id}});
     }else{
-      const pComment = await CommentsModel.findById(comment.parentComment);
-      pComment.commentIDs = pComment.commentIDs.filter(cID => cID !== req.params.id);
-      await pComment.save();
+     await CommentsModel.updateOne({_id: comment.parentComment},{$pull: {commentIDs: comment._id}});
     }
-    const user = await UserModel.findById(comment.commentedBy);
-    user.comments = user.comments.filter(cID => cID !== req.params.id);
-    await user.save();
+    await UserModel.updateOne({_id: comment.commentedBy}, {$pull:{comments: comment._id}})
 
     await deleteCommentAndReplies(req.params.id);
     res.sendStatus(200);
@@ -1145,6 +1148,74 @@ app.delete("/delete-comment/:id", async (req, res) => {
   }
 });
 
+
+//get all users
+app.delete("/admin/users/delete/:id", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in.", welcomePage: true });
+  }
+
+  const currentUser = await UserModel.findOne({ displayName: req.session.user });
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.status(403).json({ error: "Admin access only.", welcomePage: true });
+  }
+  try {
+      async function removePosts (pID, poster=null) {
+        const post = await PostsModel.findById(pID);
+        post.commentIDs.forEach(commentID => deleteComments(commentID))
+        if (!poster){
+          poster = await UserModel.findById(post.postedBy);
+          await UserModel.updateOne({_id: post.postedBy}, {$pull:{posts: pID}})
+        }else{
+          await UserModel.updateOne({_id: post.postedBy}, {$pull:{posts: pID}})
+        }
+        await PostsModel.findByIdAndDelete(post._id)
+      }
+
+    const user = await UserModel.findById(req.params.id);
+    console.log(user)
+    console.log("------------")
+
+    user.comments.forEach(async (commentID) => {
+      const comment = await CommentsModel.findById(commentID)  
+      if (comment.parentComment === null){
+          await PostsModel.updateOne({_id: comment.post},{$pull: {commentIDs: comment._id}});
+        }else{
+          console.log("remove parent\n\n")
+          await CommentsModel.updateOne({_id: comment.parentComment},{$pull: {commentIDs: comment._id}});
+        }
+      deleteComments(commentID, user, true)
+    }
+    )
+
+        user.posts.forEach((pID)=>{removePosts(pID, user)})
+
+    const communities = await CommunitiesModel.find({createdBy: user._id})
+    communities.forEach(async (community) =>{
+      const creator = user
+      
+      creator.communities = creator.communities.filter(c => c !== community._id);
+      await creator.save()
+      community.postIDs.forEach((pID) =>removePosts(pID))
+
+      community.members.forEach(async (memID) =>{
+        await UserModel.updateOne({_id: memID},{$pull:{communities: community._id}})
+      })
+
+      await CommunitiesModel.findByIdAndDelete(community._id);
+    })
+
+    console.log("--------")
+    console.log(user.comments)
+
+    const deleted = await UserModel.findByIdAndDelete(user._id)
+    if (deleted)
+      res.status(200).json({success: true})
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    res.status(500).json({ error: "Failed to delete user.", welcomePage: true });
+  }
+});
 //get all users
 app.get("/admin/users", async (req, res) => {
   if (!req.session.user) {

@@ -55,7 +55,7 @@ export default function RegisterPage() {
                 return setError(res.data.error || "Registration failed.");
             }
         } catch (err) {
-            return setError(err.response.data.error);
+            return setError(err.response?.data.error || "Registration failed.");
         }        
     };
 

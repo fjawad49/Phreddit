@@ -18,7 +18,6 @@ import WelcomePage from './components/WelcomePage.js';
 import RegisterPage from './components/RegisterPage.js';
 import LoginPage from './components/LoginPage';
 import UserProfilePage from './components/UserProfilePage.js';
-import EditPostPage from './components/EditPostPage.js';
 
 import './stylesheets/search.css';
 import { useState } from 'react';
@@ -38,7 +37,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/home" element={<HomePage />} />
               <Route path="/profile" element={<UserProfilePage />} />
-              <Route path="/edit-post/:id" element={<EditPostPage />} />
+              <Route path="/edit-post/:id" element={<PostCreatePage />} />
               <Route path="/edit-community/:id" element={<CommunityCreatePage />} />
               <Route path="/edit-comment/:commentID" element={<CommentCreatePage />} />
               <Route path="/create-post" element={<PostCreatePage />} />

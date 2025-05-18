@@ -21,11 +21,10 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    console.log("hello")
     try{
       async function fetchUser () {
         var res = await axios.get("http://localhost:8000/check-login", { withCredentials:true })
-        console.log(res)
+        console.log(!res.data)
         if (!res.data){
           localStorage.removeItem('user')
         } else{
@@ -58,7 +57,7 @@ export default function LoginPage() {
         }
     } catch (err) {
       console.log(err)
-      setError(err.response.data.error);
+      setError(err.response?.data.error  || "Login failed.");
     }
   };
 

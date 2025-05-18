@@ -93,12 +93,11 @@ export default function UserProfilePage() {
         if (activeTab === "posts") endpoint = `/delete-post/${id}`;
         else if (activeTab === "communities") endpoint = `/delete-community/${id}`;
         else if (activeTab === "comments") endpoint = `/delete-comment/${id}`;
-        else if (activeTab === "users") endpoint = `/admin/users/${id}`;
+        else if (activeTab === "users") endpoint = `/admin/users/delete/${id}`;
     
         try {
             await axios.delete(`http://localhost:8000${endpoint}`, { withCredentials: true });
             setItems(prev => prev.filter(item => item._id !== id));
-            navigate(0)
         } catch (err) {
             console.error("Delete error:", err);
             setError(`Failed to delete ${activeTab.slice(0, -1)}.`);
@@ -209,7 +208,7 @@ export default function UserProfilePage() {
                             <span>
                                 <strong>{item.displayName}</strong> ({item.email}) - Rep: {item.reputation}
                               </span>
-                              <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+                              {item._id !== loggedInUser._id && (<button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>)}
                               <Link to={`/admin/user/${item._id}`} style={{ marginLeft: "1rem" }}>View</Link>
                             </div>
                           )}

@@ -12,39 +12,45 @@ const NavBar = () => {
 
   // Ensure communities are loaded into state when received
   useEffect(() => {
-    axios.get('http://localhost:8000/communities')
-      .then(res => {
-        //if user logged in, sort communities so that joined ones appear first
-        if (user && user._id) {
-          axios.get('http://localhost:8000/user-data')
-            .then(res=>{
-              setUser(res.data)
-              localStorage.setItem('user', JSON.stringify(res.data));
-            })
-            .catch(err=>{
-              console.log("Could not fetch user data: " + err);
-            })
+    setUser(JSON.parse(localStorage.getItem("user")));
+    try{
+      axios.get('http://localhost:8000/communities')
+        .then(res => {
+          //if user logged in, sort communities so that joined ones appear first
+          if (user && user._id) {
+            axios.get('http://localhost:8000/user-data')
+              .then(res=>{
+                setUser(res.data)
+                localStorage.setItem('user', JSON.stringify(res.data));
+              })
+              .catch(err=>{
+                setUser(null)
+                console.log("Could not fetch user data: " + err);
+              })
 
-  
-          const joined = [];
-          const notJoined = [];
-          console.log(true)
-          res.data.forEach(comm => {
-            if (comm.members && comm.members.includes(user._id)) {
-              joined.push(comm);
-            } else {
-              notJoined.push(comm);
-            }
-          });
-          setLoadedCommunities([...joined, ...notJoined]);
-        } else {
-          //guest user sees original order
-          setLoadedCommunities(res.data);
-        }
-      })
-      .catch(err => {
-        console.log("Could not retrieve communities: " + err);
-      });
+    
+            const joined = [];
+            const notJoined = [];
+            console.log(true)
+            res.data.forEach(comm => {
+              if (comm.members && comm.members.includes(user._id)) {
+                joined.push(comm);
+              } else {
+                notJoined.push(comm);
+              }
+            });
+            setLoadedCommunities([...joined, ...notJoined]);
+          } else {
+            //guest user sees original order
+            setLoadedCommunities(res.data);
+          }
+        })
+        .catch(err => {
+          console.log("Could not retrieve communities: " + err);
+        });
+      }catch (err){
+        console.log("Error loading Navbar")
+      }
   }, [location]);
   
   const pathname = location.pathname;

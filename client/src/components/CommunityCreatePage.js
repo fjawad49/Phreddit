@@ -70,10 +70,10 @@ export default function CommunityCreatePage() {
             } catch (err) {
                 console.log(err)
                 console.error("Community creation failed:", err);
-                if (err.status === 500 || err.response.data.welcomePage){
-                    setErrorPage(err.response.data.error)
+                if (err.status === 500 || err.response?.data.welcomePage){
+                    setErrorPage(err.response?.data.error || "Please try again later.")
                 }else
-                    setError(err.response.data.error);
+                    setError(err.response?.data.error || "Please try again later.");
             }
         }
     }
@@ -112,10 +112,10 @@ export default function CommunityCreatePage() {
         } catch (err) {
             console.log(err)
             console.error("Community update failed:", err);
-            if (err.status === 500 || err.response.data.welcomePage){
-                setErrorPage(err.response.data.error)
+            if (err.status === 500 || err.response?.data.welcomePage){
+                setErrorPage(err.response?.data.error || "Update failed.")
             }else
-                setError(err.response.data.error);
+                setError(err.response?.data.error || "Update failed.");
         }
   }
 

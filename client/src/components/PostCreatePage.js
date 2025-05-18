@@ -67,7 +67,7 @@ export default function PostCreatePage() {
                 setLinkFlairs(flairRes.data);
             } catch (err) {
                 console.error("Failed to fetch form data:", err);
-                setErrorPage(err.response.data || "Failed to load form options");
+                setErrorPage(err.response?.data || "Failed to load form options");
             }
         }
         fetchData();

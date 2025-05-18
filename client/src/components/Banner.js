@@ -9,8 +9,28 @@ const Banner = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   
-  const user = JSON.parse(localStorage.getItem("user"));
-  console.log(localStorage.getItem("user"))
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
+
+  useEffect(() => {
+    try{
+      async function fetchUser () {
+        var res = await axios.get("http://localhost:8000/check-login", { withCredentials:true })
+        console.log(!res.data)
+        if (!res.data){
+          localStorage.removeItem('user')
+          setUser(null)
+        } else{
+          localStorage.setItem('user', JSON.stringify(res.data))
+          setUser(res.data)
+        }      
+      }
+      
+      fetchUser()
+
+    }catch (err){
+      console.log(err)
+    }
+  }, [location])
 
   const pathname = location.pathname;
   if (pathname === "/" || pathname === "/register" || pathname === "/login"){
