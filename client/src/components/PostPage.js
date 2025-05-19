@@ -47,6 +47,7 @@ export default function PostPage() {
 
     
     useEffect(() => {
+        const user = JSON.parse(localStorage.getItem("user"));
         if (!postInfo?.content) return;
         let commentCount = 0;
 
@@ -90,7 +91,7 @@ export default function PostPage() {
           }
         }
 
-    }, [postInfo]);
+    }, [postInfo, userVote, postID, communityID, isGuest]);
 
     const handleAddComment = () => {
         navigate(`/${communityID}/posts/${postID}/comment/new`);
@@ -108,7 +109,7 @@ export default function PostPage() {
 
     const handlePostVote = async (type) => {
       try {
-        if (userVote === "no-vote" || userVote === "upvote" && type === "no-vote" || userVote === "downvote" && type === "no-vote"){
+        if (userVote === "no-vote" || (userVote === "upvote" && type === "no-vote") || (userVote === "downvote" && type === "no-vote")){
           const res = await axios.post(`http://localhost:8000/vote/post/${postID}`, {voteType: type}, {withCredentials: true});
           console.log(res.data)
           setUserVote(res.data.userVote)

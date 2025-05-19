@@ -54,7 +54,7 @@ const Banner = () => {
     try {
       localStorage.removeItem("user");
       console.log("logging out")
-      const res = await axios.get("http://localhost:8000/logout")
+      await axios.get("http://localhost:8000/logout")
       console.log("success")
       navigate("/")
     } catch (err) {

@@ -12,7 +12,8 @@ const NavBar = (props) => {
 
   // Ensure communities are loaded into state when received
   useEffect(() => {
-    setUser(JSON.parse(localStorage.getItem("user")));
+    const user = JSON.parse(localStorage.getItem("user"));
+    setUser(user);
     try{
       axios.get('http://localhost:8000/communities')
         .then(res => {
@@ -52,7 +53,7 @@ const NavBar = (props) => {
         console.log("Error loading Navbar")
       }
       props.setReload(false);
-  }, [location, props.reload]);
+  }, [location, props]);
   
   const pathname = location.pathname;
   if (pathname === "/" || pathname === "/register" || pathname === "/login"){

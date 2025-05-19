@@ -1,12 +1,11 @@
 import {useEffect, useState} from "react"
 import { useNavigate } from "react-router-dom";
 import "../stylesheets/forms.css";
-import {loginUser} from "./Api";
 import axios from 'axios';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-
+  const [loggedIn, setLoggedIn] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -22,6 +21,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     try{
+      setLoggedIn(false);
       async function fetchUser () {
         var res = await axios.get("http://localhost:8000/check-login", { withCredentials:true })
         console.log(!res.data)
@@ -29,7 +29,7 @@ export default function LoginPage() {
           localStorage.removeItem('user')
         } else{
           localStorage.setItem('user', JSON.stringify(res.data))
-          navigate("/home");
+          setLoggedIn(true);
         }      
       }
       
@@ -40,7 +40,9 @@ export default function LoginPage() {
       setError(err.response.data.error);
     }
   }, [])
-
+  if (loggedIn){
+    navigate('/home')
+  }
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { email, password } = formData;

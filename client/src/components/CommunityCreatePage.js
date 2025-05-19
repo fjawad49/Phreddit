@@ -9,7 +9,6 @@ export default function CommunityCreatePage() {
     const params = useParams(); //community ID from /edit-community/:id
     const navigate = useNavigate();
 
-    const user = JSON.parse(localStorage.getItem('user'))
     const [editComm, setEditComm] = useState(false);
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -17,6 +16,8 @@ export default function CommunityCreatePage() {
     const [errorPage, setErrorPage] = useState(null)
 
     useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'))
+
     async function fetchCommunity() {
       try {
         const res = await axios.get(`http://localhost:8000/communities/${params.id}`);

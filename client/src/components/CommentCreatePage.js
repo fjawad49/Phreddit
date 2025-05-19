@@ -1,6 +1,6 @@
 import "../stylesheets/forms.css";
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { TextBox, validateLinks } from "./FormComponents.js";
 import axios from "axios";
 import { ErrorPage } from "./WelcomePage.js";
@@ -13,7 +13,6 @@ export default function CommentCreatePage() {
     const [errorPage, setErrorPage] = useState(null);
     const [content, setContent] = useState('');
     const [contentError, setContentError] = useState('');
-    const user = JSON.parse(localStorage.getItem("user"));
 
     useEffect(() => {
         async function fetchComment() {
@@ -29,7 +28,7 @@ export default function CommentCreatePage() {
             }
         }
         if (!params.postID){
-            if (user){
+            if (JSON.parse(localStorage.getItem("user"))){
                 fetchComment();
                 setEdit(true)
             }else{
@@ -40,7 +39,7 @@ export default function CommentCreatePage() {
             setEdit(false)
             setContentError("")
         }
-    }, [params.commentID]);
+    }, [params]);
 
     async function handleUpdate(e) {
         e.preventDefault();

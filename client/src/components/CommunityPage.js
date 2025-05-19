@@ -1,6 +1,6 @@
 import "../stylesheets/forms.css";
 import "../stylesheets/welcome.css" 
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {useParams } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import Postcard from './Postcard.js'
 //import Model from "../models/model.js";
@@ -12,7 +12,6 @@ import { ErrorPage } from "./WelcomePage.js";
 
 export default function CommunityPage(props) {
     /* Retrieve community name from pathname */
-    const navigate = useNavigate();
     const { communityID } = useParams();
     const [community, setCommunity] = useState(null);
     const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));

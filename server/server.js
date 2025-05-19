@@ -25,7 +25,7 @@ db.on('connected', function() {
 
 app.use(express.urlencoded({ extended: false }));
 
-const tenMinutes = 1000 * 1000;
+const tenMinutes = 1000 * 3000;
 
 app.use(
   session({
@@ -991,13 +991,8 @@ app.put("/update-post/:id", async function (req, res) {
   }
 });
 
-app.delete("/delete-post/:id", async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not authorized" });
-  }
-
-  try {
-    const post = await PostsModel.findById(req.params.id);
+async function deletePost(postID){
+    const post = await PostsModel.findById(postID);
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
@@ -1008,11 +1003,23 @@ app.delete("/delete-post/:id", async (req, res) => {
     community.postIDs = community.postIDs.filter(pID => pID !== post._id)
 
     post.commentIDs.forEach(commentID => deleteComments(commentID))
-    
 
-    const deleted = await PostsModel.findByIdAndDelete(req.params.id);
+
+    const deleted = await PostsModel.findByIdAndDelete(postID);
+    return deleted
+}
+
+app.delete("/delete-post/:id", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not authorized" });
+  }
+
+  try {
+
+    const deleted = await deletePost(req.params.id)
     console.log(deleted)
-    res.status(200).json({ success: true });
+    if (deleted)
+      res.status(200).json({ success: true });
   } catch (err) {
     console.error("Error deleting post:", err);
     res.status(500).json({ error: "Failed to delete post" });
@@ -1058,11 +1065,8 @@ app.put("/update-community/:id", async function (req, res) {
 async function deleteComments(commentID, commenter=null, checkParent=false) {
   let comment = await CommentsModel.findById(commentID)
   if (comment.commentIDs.length > 0)
-    comment.commentIDs = await Promise.all(comment.commentIDs.map(cID => deleteComments(cID, null)));
+    comment.commentIDs.forEach(cID => deleteComments(cID, null));
   if (!commenter){
-    console.log("---------------------------")
-    console.log(commentID)
-    console.log(comment)
     commenter = await UserModel.findById(comment.commentedBy);
     if (commenter){
       await UserModel.updateOne({_id: comment.commentedBy}, {$pull:{comments: commentID}})
@@ -1290,3 +1294,4 @@ process.on('SIGINT', async () => {
   console.log("Server closed. Database instance disconnected.");
 })
 
+module.exports = app

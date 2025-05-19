@@ -35,10 +35,8 @@ const SearchResults = () => {
   //const [communitiesInfo, setCommunitiesInfo] = useState([]);
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [sortType, setSortType] = useState("newest");
-  const [userCommunities, setUserCommunities] = useState([]);
   const [joinedCount, setJoinedCount] = useState(0);
-  const user = JSON.parse(localStorage.getItem("user")); //already logged-in?
-
+  const user = JSON.parse(localStorage.getItem("user"));
   /*
   //fetch all community/post data
   useEffect(() => {
@@ -129,11 +127,10 @@ const SearchResults = () => {
     const fetchData = async () => {
       try {
         let joined = [];
-  
+        const user = JSON.parse(localStorage.getItem("user"));
         if (user) {
           const res = await axios.get("http://localhost:8000/user-communities", { withCredentials: true });
           joined = res.data.map(comm => comm.name);
-          setUserCommunities(joined);
         }
   
         const res = await axios.get(`http://localhost:8000/search?q=${searchQuery}`);
@@ -147,7 +144,9 @@ const SearchResults = () => {
           return {
             ...post,
             timestamp: new Date(post.postedDate),
-            latestComment: null,
+            latestComment: (post.commentIDs.length > 0 ?
+                new Date(sortedComments[0])
+                : null),
             commentCount,
             communityName: post.communityId?.name || "",
             communityID: post.communityId?._id || post.communityId,
@@ -246,10 +245,10 @@ const SearchResults = () => {
         ) : (
           filteredPosts.map((post, index) => (
             <React.Fragment key={post._id}>
-              {index === 0 && user && userCommunities.length > 0 && (
+              {index === 0 && user && joinedCount > 0 && (
                 <div className="sublist-divider">Posts from your communities</div>
               )}
-              {index === userCommunities.length && user && (
+              {index === joinedCount && user && (
                 <div className="sublist-divider">Posts from communities you haven’t joined</div>
               )}
               <Postcard post={post} />

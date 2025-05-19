@@ -31,6 +31,12 @@ Add design docs in *images/*
    ```
    The site will be now available at http://localhost:3000
 
+## Instructions to run tests
+
+1. **Express+Model Tests**: To run these two test please first make sure the server is launched in a separate terminal instance using `nodemon server.js`. In a different terminal, navigate to the `.\server` folder and run `npm test` to run both tests.
+
+2. **React Test**: To run this test please first make sure the server is launched in a separate terminal instance using `nodemon server.js`. In a different terminal, navigate to the `.\client` folder and run `npm test --watchAll=false` to run the test.
+
 ## Team Member 1 Contribution
 Sharanya Kataru
 - Implemented MongoDB schemas and init.js script

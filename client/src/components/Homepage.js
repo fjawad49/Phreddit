@@ -27,6 +27,7 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
     if(user){
       axios.get('http://localhost:8000/user-communities', { withCredentials: true })
         .then(res =>
@@ -40,6 +41,7 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
     if (communitiesInfo.length < 1 || (user && userCommunities === null)){
       return
     }
@@ -137,7 +139,7 @@ const HomePage = () => {
     } catch (error) {
       console.error("Error in useEffect:", error);
     }
-  }, [communitiesInfo, sortOrder]);
+  }, [communitiesInfo, sortOrder, userCommunities]);
 
 return (
     <div className="homepage-container">
