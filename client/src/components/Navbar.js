@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import "../stylesheets/navbar.css";
 import axios from 'axios';
 
-const NavBar = () => {
+const NavBar = (props) => {
   const location = useLocation()
   const [loadedCommunities, setLoadedCommunities] = useState([]);
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
@@ -51,7 +51,8 @@ const NavBar = () => {
       }catch (err){
         console.log("Error loading Navbar")
       }
-  }, [location]);
+      props.setReload(false);
+  }, [location, props.reload]);
   
   const pathname = location.pathname;
   if (pathname === "/" || pathname === "/register" || pathname === "/login"){

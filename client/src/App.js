@@ -23,20 +23,21 @@ import './stylesheets/search.css';
 import { useState } from 'react';
 
 function App() {
+  const [reloadNavbar, setReloadNavbar] = useState(false);
   return (
     <Router>
       <Banner />
       <div className="app-container">
         {(
           <>
-            <Navbar />  
+            <Navbar reload={reloadNavbar} setReload={setReloadNavbar}/>  
             <section className="main-content">
               <Routes>
               <Route path="/" element={<WelcomePage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/home" element={<HomePage />} />
-              <Route path="/profile" element={<UserProfilePage />} />
+              <Route path="/profile" element={<UserProfilePage setReloadNavbar={setReloadNavbar}/>} />
               <Route path="/edit-post/:id" element={<PostCreatePage />} />
               <Route path="/edit-community/:id" element={<CommunityCreatePage />} />
               <Route path="/edit-comment/:commentID" element={<CommentCreatePage />} />
@@ -46,8 +47,8 @@ function App() {
               <Route path="/:communityID/posts/:postID" element={<PostPage  />} />
               <Route path="/:communityID/posts/:postID/comment/new" element={<CommentCreatePage  />} />
               <Route path="/:communityID/posts/:postID/comment/:commentID/reply" element={<CommentCreatePage/>} />
-              <Route path="/:communityID" element={<CommunityPage />} />
-              <Route path="/admin/user/:id" element={<UserProfilePage />} />
+              <Route path="/:communityID" element={<CommunityPage setReloadNavbar={setReloadNavbar}/>} />
+              <Route path="/admin/user/:id" element={<UserProfilePage setReloadNavbar={setReloadNavbar}/>} />
               </Routes>
             </section>
           </>

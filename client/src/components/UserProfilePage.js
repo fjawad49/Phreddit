@@ -5,7 +5,7 @@ import TimeStamp from './TimeStamp';
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {ErrorPage} from './WelcomePage.js'
 
-export default function UserProfilePage() {
+export default function UserProfilePage(props) {
   const navigate = useNavigate()
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState("posts");
@@ -98,6 +98,9 @@ export default function UserProfilePage() {
         try {
             await axios.delete(`http://localhost:8000${endpoint}`, { withCredentials: true });
             setItems(prev => prev.filter(item => item._id !== id));
+            if (activeTab === "communities" || activeTab === "users"){
+              props.setReloadNavbar(true)
+            }
         } catch (err) {
             console.error("Delete error:", err);
             setError(`Failed to delete ${activeTab.slice(0, -1)}.`);

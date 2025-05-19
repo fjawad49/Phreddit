@@ -568,14 +568,16 @@ app.get("/posts/:postID", async function (req, res) {
   console.log("GET /posts/" + req.params.postID);
   console.log("Fetching post with ID:", req.params.postID);
   try {
-    const post = await PostsModel.findById(req.params.postID);
+    const post = await PostsModel.findById(req.params.postID).populate('postedBy');
     if (!post) {
       return res.status(404).send("Post not found");
     }
     post.commentIDs = await Promise.all(    
       post.commentIDs.map(populateComments)
     )
-    res.json(post);
+    const jsonPost = post.toObject();
+    jsonPost.postedBy = post.postedBy.displayName
+    res.json(jsonPost);
   } catch (err) {
     console.error("Error fetching post:", err);
     res.status(500).send("Failed to fetch post");
@@ -1188,7 +1190,11 @@ app.delete("/admin/users/delete/:id", async (req, res) => {
     }
     )
 
-        user.posts.forEach((pID)=>{removePosts(pID, user)})
+    user.posts.forEach((pID)=>{removePosts(pID, user)})
+
+    user.communities.forEach(async (cID) => {
+      await CommunitiesModel.updateOne({_id: cID},{$pull: {members: user._id}})
+    })
 
     const communities = await CommunitiesModel.find({createdBy: user._id})
     communities.forEach(async (community) =>{

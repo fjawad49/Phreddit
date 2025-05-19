@@ -108,7 +108,7 @@ export default function CommunityCreatePage() {
         }, {
             withCredentials: true
         });
-        navigate(`/home`); //or redirect to `/profile` or `/communities/${id}`
+        navigate(`/profile`); //or redirect to `/profile` or `/communities/${id}`
         } catch (err) {
             console.log(err)
             console.error("Community update failed:", err);

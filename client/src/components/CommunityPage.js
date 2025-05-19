@@ -10,7 +10,7 @@ import TimeStamp from "./TimeStamp.js";
 import { getEarliestDate } from "./CommentThread.js";
 import { ErrorPage } from "./WelcomePage.js";
 
-export default function CommunityPage() {
+export default function CommunityPage(props) {
     /* Retrieve community name from pathname */
     const navigate = useNavigate();
     const { communityID } = useParams();
@@ -95,6 +95,7 @@ export default function CommunityPage() {
           const res = await axios.get(`http://localhost:8000/user-data`,{withCredentials: true})
           localStorage.setItem('user', JSON.stringify(res.data));
           setUser(res.data)
+          props.setReloadNavbar(true)
         } catch (err) {
           console.error("Error joining community:", err);
           setError("Error joining community.");
@@ -107,6 +108,7 @@ export default function CommunityPage() {
           const res = await axios.get(`http://localhost:8000/user-data`,{withCredentials: true})
           localStorage.setItem('user', JSON.stringify(res.data));
           setUser(res.data);
+          props.setReloadNavbar(true)
         } catch (err) {
           console.error("Error leaving community:", err);
           setError("Error leaving community.");

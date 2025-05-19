@@ -17,9 +17,9 @@ export default function PostPage() {
     const [commCount, setCommCount] = useState(0);
     const [sortedThreads, setSortedThreads] = useState([]);
     const [votes, setVotes] = useState(0);
-    const user = JSON.parse(localStorage.getItem("user"));
     const [error, setError] = useState(null);
     const [userVote, setUserVote] = useState(null)
+    const user = JSON.parse(localStorage.getItem("user"));
 
     const isGuest = !user;
 

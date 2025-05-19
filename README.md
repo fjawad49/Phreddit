@@ -6,21 +6,29 @@ Add design docs in *images/*
 ## Instructions to setup and run project
 1. Clone the repository: git clone <your-repo-url>
 2. Install server dependencies: 
+   ```
    cd server
    npm install
+   ```
 3. Install client dependencies:
+   ```
    cd ../client
    npm install
+
 4. Initialize MongoDB with admin user:
-   node server/init.js <admin-email> <admin-display-name> <admin-password>
+   `node server/init.js mongodb://127.0.0.1:27017/phreddit <admin-email> <admin-display-name> <admin-password>`
 5. Run MongoDB locally:
-   mongodb://127.0.0.1:27017/phreddit
+   `mongodb://127.0.0.1:27017/phreddit`
 6. Start the backend:
+   ```
    cd server
    npx nodemon server.js
+   ```
 6. Start the frontend:
+   ```
    cd client
    npm start
+   ```
    The site will be now available at http://localhost:3000
 
 ## Team Member 1 Contribution

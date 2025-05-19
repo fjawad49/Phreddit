@@ -66,7 +66,7 @@ export default function CommentCreatePage() {
 
         try {
             await axios.delete(`http://localhost:8000/delete-comment/${params.commentID}`);
-            navigate(`/${params.communityID}/posts/${params.postID}`);
+            navigate(`/profile`);
         } catch (err) {
             console.error("Delete failed:", err);
             setContentError("Failed to delete comment.");
