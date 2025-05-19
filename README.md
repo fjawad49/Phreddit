@@ -22,7 +22,7 @@ Add design docs in *images/*
 6. Start the backend:
    ```
    cd server
-   npx nodemon server.js
+   nodemon server.js
    ```
 6. Start the frontend:
    ```
